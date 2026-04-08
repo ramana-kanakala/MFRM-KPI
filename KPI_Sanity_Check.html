@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MFRM KPI Reference — invent.ai</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+/* ── invent.ai brand tokens ── */
+:root {
+  --purple:#C74AD4; --purple50:#E3A5E9; --purple10:#F9EDFB;
+  --yellow:#DDFA5E; --dyellow:#C7E155; --lyellow:#EEFDAE;
+  --blue:#DEF5FA;   --dblue:#A6B8BB;   --lblue:#EFFAFD;
+  --black:#000;     --offwhite:#EFEFEF; --dgray:#808080;
+  --white:#FFF;     --gray:#BFBFBF;    --lgray:#E5E5E5;
+
+  /* Light-theme semantics */
+  --bg:      #EFEFEF;
+  --surface: #FFFFFF;
+  --surface2:#F7F7F7;
+  --surface3:#F0F0F0;
+  --border:  rgba(199,74,212,0.18);
+  --border2: rgba(0,0,0,0.09);
+  --text:    #111111;
+  --muted:   #555555;
+  --dim:     #AAAAAA;
+  --ok-text: #3a7500;
+  --warn:    #C74AD4;
+  --error:   #c0392b;
+  --hdr-bg:  #FFFFFF;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;line-height:1.6;overflow-x:hidden}
+
+/* ── TOP HEADER ── */
+.top-hdr{background:var(--hdr-bg);border-bottom:2px solid var(--border);padding:12px 28px 0;position:sticky;top:0;z-index:200;box-shadow:0 2px 12px rgba(0,0,0,0.06)}
+.hdr-row1{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+.logo-dot{width:10px;height:10px;border-radius:50%;background:var(--purple)}
+.brand{font-size:11px;font-weight:700;color:var(--purple);letter-spacing:1.5px;text-transform:uppercase}
+.page-title{font-size:20px;font-weight:700;color:var(--black);letter-spacing:-0.3px;flex:1}
+.stats-inline{display:flex;gap:14px;align-items:center}
+.si{display:flex;flex-direction:column;align-items:center}
+.si-val{font-size:17px;font-weight:700;line-height:1}
+.si-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.s-purple .si-val{color:var(--purple)}
+.s-green  .si-val{color:var(--ok-text)}
+.s-warn   .si-val{color:#b06000}
+.si-div{width:1px;height:26px;background:var(--border2)}
+
+/* ── TABS ── */
+.tab-bar{display:flex;gap:0;margin-top:6px}
+.tab-btn{padding:9px 22px;font-size:13px;font-weight:600;cursor:pointer;background:none;border:none;
+  color:var(--muted);border-bottom:3px solid transparent;transition:all .15s;letter-spacing:.2px}
+.tab-btn:hover{color:var(--text)}
+.tab-btn.active{color:var(--purple);border-bottom-color:var(--purple)}
+
+/* ── LEGEND ── */
+.legend-bar{display:flex;gap:8px;flex-wrap:wrap;padding:7px 0 9px;align-items:center}
+.leg-lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-right:4px}
+.leg-item{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--muted)}
+.lsw{width:24px;height:16px;border-radius:3px;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:700}
+.lmiss{width:24px;height:16px;border-radius:3px;
+  background:repeating-linear-gradient(45deg,#e0e0e0,#e0e0e0 3px,#f5f5f5 3px,#f5f5f5 6px);border:1px solid #ccc}
+
+/* ══════════════════════════════════════════════════
+   OVERVIEW TAB
+══════════════════════════════════════════════════ */
+.tab-inner{padding:24px 32px 60px;max-width:960px;margin:0 auto}
+
+.ov-section{background:var(--surface);border:1px solid var(--border2);border-radius:12px;padding:28px 32px;margin-bottom:20px;box-shadow:0 1px 4px rgba(0,0,0,0.05)}
+.ov-section-title{font-size:16px;font-weight:700;color:var(--purple);margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.ov-section-title::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* Purpose cards */
+.purpose-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:20px}
+.p-card{background:var(--bg);border:1px solid var(--border2);border-radius:8px;padding:14px 16px}
+.p-card-icon{font-size:22px;margin-bottom:6px}
+.p-card-title{font-size:12px;font-weight:700;color:var(--purple);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.p-card-desc{font-size:12px;color:var(--muted);line-height:1.5}
+
+.ov-note{background:var(--lyellow);border-left:3px solid var(--dyellow);border-radius:0 6px 6px 0;padding:10px 14px;font-size:13px;color:#3a3a00;margin-top:4px}
+.ov-note strong{color:#2a2a00}
+
+/* How to use steps */
+.how-steps{display:flex;flex-direction:column;gap:10px}
+.how-step{display:flex;gap:14px;align-items:flex-start}
+.step-num{min-width:26px;height:26px;border-radius:50%;background:var(--purple);color:#fff;
+  font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px}
+.step-body{flex:1}
+.step-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px}
+.step-desc{font-size:12px;color:var(--muted);line-height:1.5}
+.step-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}
+.step-tag{font-size:10px;font-weight:600;padding:2px 7px;border-radius:99px;background:var(--purple10);color:var(--purple);border:1px solid rgba(199,74,212,.2)}
+
+/* Type rules table */
+.rules-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.rule-chip{display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:8px 12px}
+.rule-suf{font-family:monospace;font-size:13px;font-weight:700;color:var(--purple)}
+.rule-arrow{color:var(--dim);font-size:12px}
+.rule-type{font-size:11px;color:var(--muted)}
+
+/* Refresh button */
+.refresh-row{display:flex;align-items:center;gap:12px;margin-top:16px;flex-wrap:wrap}
+.btn-refresh{background:var(--purple);color:#fff;border:none;padding:10px 20px;border-radius:7px;
+  font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:7px;transition:all .15s}
+.btn-refresh:hover{background:#a83ab8;box-shadow:0 4px 12px rgba(199,74,212,.3)}
+.btn-sheets{background:var(--surface);color:var(--purple);border:1.5px solid var(--border);padding:10px 20px;border-radius:7px;
+  font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:7px;transition:all .15s}
+.btn-sheets:hover{background:var(--purple10)}
+.refresh-hint{font-size:11px;color:var(--muted);line-height:1.5}
+
+/* Refresh modal */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:1000;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border-radius:12px;padding:28px 32px;max-width:520px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,0.15)}
+.modal-title{font-size:16px;font-weight:700;color:var(--purple);margin-bottom:16px}
+.modal-steps{display:flex;flex-direction:column;gap:10px;margin-bottom:18px}
+.modal-step{display:flex;gap:10px;font-size:13px;color:var(--muted)}
+.modal-step-num{min-width:20px;height:20px;border-radius:50%;background:var(--purple);color:#fff;
+  font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px}
+.modal-close{background:var(--bg);border:1px solid var(--border2);color:var(--muted);
+  padding:7px 16px;border-radius:6px;font-size:12px;cursor:pointer;float:right}
+.modal-open-btn{background:var(--purple);color:#fff;border:none;padding:8px 16px;border-radius:6px;
+  font-size:12px;font-weight:600;cursor:pointer;margin-right:8px}
+
+/* ══════════════════════════════════════════════════
+   SANITY TAB
+══════════════════════════════════════════════════ */
+.sanity-inner{padding:18px 28px 50px;max-width:1440px}
+.ccbar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.cc{background:var(--surface);border:1px solid var(--border2);border-radius:8px;padding:9px 14px;display:flex;align-items:center;gap:11px;box-shadow:0 1px 3px rgba(0,0,0,0.04)}
+.cc.pass{border-color:rgba(58,117,0,0.25);background:rgba(221,250,94,.12)}
+.cc-ico{font-size:16px}
+.cc-lbl{font-size:13px;font-weight:600;color:var(--text)}
+.cc-desc{font-size:12px;color:var(--muted);margin-top:1px}
+.cc-status{font-size:12px;font-weight:700;margin-left:auto;white-space:nowrap}
+.pass .cc-status{color:var(--ok-text)}
+.slabel{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1.2px;font-weight:600;
+  margin:18px 0 9px;display:flex;align-items:center;gap:8px}
+.slabel::after{content:'';flex:1;height:1px;background:var(--border2)}
+.sec{margin-bottom:8px;border:1px solid var(--border2);border-radius:10px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.04)}
+.sec-hdr{display:flex;align-items:center;gap:9px;padding:10px 15px;cursor:pointer;user-select:none;transition:filter .15s}
+.sec-hdr:hover{filter:brightness(.97)}
+.sec-ok {background:linear-gradient(90deg,rgba(58,117,0,.08),rgba(58,117,0,.02))}
+.sec-w1 {background:linear-gradient(90deg,rgba(199,74,212,.07),rgba(199,74,212,.01))}
+.sec-w2 {background:linear-gradient(90deg,rgba(199,74,212,.10),rgba(199,74,212,.02))}
+.sec-w3 {background:linear-gradient(90deg,rgba(199,74,212,.14),rgba(199,74,212,.03))}
+.sec-w4 {background:linear-gradient(90deg,rgba(199,74,212,.18),rgba(199,74,212,.05))}
+.sec-w5 {background:linear-gradient(90deg,rgba(199,74,212,.23),rgba(199,74,212,.07))}
+.sic{font-size:12px}
+.ok-ic{color:var(--ok-text)}
+.warn-ic{color:var(--purple)}
+.stitle{font-weight:600;font-size:13px;color:var(--text);flex:1}
+.scnt{font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px}
+.cnt-ok{background:rgba(58,117,0,.12);color:var(--ok-text)}
+.cnt-warn{background:rgba(199,74,212,.12);color:var(--purple)}
+.chev{color:var(--muted);font-size:10px;transition:transform .2s;margin-left:2px}
+.chev.open{transform:rotate(90deg)}
+.chips{display:flex;gap:4px}
+.chip{font-size:11px;font-weight:700;padding:1px 7px;border-radius:4px;background:rgba(199,74,212,.1);color:var(--purple);border:1px solid rgba(199,74,212,.25)}
+.sec-body{background:var(--surface);overflow-x:auto}
+
+/* Sanity table */
+.kt{width:100%;border-collapse:collapse;font-size:12px}
+.kt thead th{background:var(--surface2);color:var(--muted);text-transform:uppercase;
+  font-size:11px;letter-spacing:.5px;font-weight:700;padding:8px 10px;
+  text-align:left;border-bottom:1px solid var(--border2);white-space:nowrap}
+.kt tbody tr{border-bottom:1px solid var(--border2);transition:background .1s}
+.kt tbody tr:hover{background:rgba(199,74,212,.04)}
+.kt tbody tr:last-child{border-bottom:none}
+.col-WP{color:var(--purple)!important}
+.col-TY{color:#6b7c00!important}
+.col-LY{color:#3d7a8a!important}
+.col-LLY{color:#4a6a7a!important}
+.col-BDGT{color:#8a3a9a!important}
+.col-FCST{color:#b06000!important}
+.col-absent{opacity:.3!important;text-decoration:line-through}
+.col-key{width:245px;padding:6px 10px}
+.col-key code{font-family:'JetBrains Mono','Fira Code',monospace;font-size:11px;color:var(--purple);background:rgba(199,74,212,.07);padding:2px 5px;border-radius:3px}
+.col-name{padding:6px 10px;color:var(--muted);font-size:12px;min-width:180px}
+.col-ver{width:64px;text-align:center}
+.col-exp{width:66px;text-align:center;padding:6px}
+td.cell-present{text-align:center;padding:5px 4px}
+td.cell-missing{text-align:center;padding:5px 4px;background:repeating-linear-gradient(45deg,#e8e8e8,#e8e8e8 4px,#f5f5f5 4px,#f5f5f5 8px)}
+.dash{color:var(--dim);font-size:13px}
+.tbadge{display:inline-block;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:.3px}
+.ebadge{display:inline-block;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700;opacity:.75}
+.exp-na{color:var(--dim);font-size:12px}
+.type-retail .tbadge,.type-retail.ebadge{background:#F9EDFB;color:#8a1a9a;border:1px solid rgba(199,74,212,.3)}
+.type-cost   .tbadge,.type-cost.ebadge  {background:#EEFDAE;color:#4a5c00;border:1px solid rgba(199,225,85,.5)}
+.type-pct    .tbadge,.type-pct.ebadge   {background:#EFFAFD;color:#2a6a7a;border:1px solid rgba(166,184,187,.5)}
+.type-unit   .tbadge,.type-unit.ebadge  {background:#F9EDFB;color:#8a3a9a;border:1px solid rgba(227,165,233,.5)}
+.type-idx    .tbadge,.type-idx.ebadge   {background:#F8FDE8;color:#5a6e00;border:1px solid rgba(199,225,85,.4)}
+.type-bool   .tbadge,.type-bool.ebadge  {background:#EFFAFD;color:#2a5a6a;border:1px solid rgba(166,184,187,.4)}
+.type-viol{position:relative}
+.vflag{position:absolute;top:2px;right:2px;background:var(--error);color:#fff;font-size:8px;font-weight:900;width:11px;height:11px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+
+/* ══════════════════════════════════════════════════
+   PIVOT TAB
+══════════════════════════════════════════════════ */
+.pivot-shell{display:flex;height:calc(100vh - 132px);overflow:hidden}
+.filter-panel{width:210px;min-width:210px;background:var(--surface);border-right:1px solid var(--border2);overflow-y:auto;padding:10px 0;transition:width .2s,min-width .2s,opacity .2s;box-shadow:2px 0 8px rgba(0,0,0,0.04)}
+.filter-panel.collapsed{width:0;min-width:0;opacity:0;overflow:hidden;padding:0}
+.fp-section{padding:10px 12px;border-bottom:1px solid var(--border2)}
+.fp-title{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px}
+.fp-input{background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:6px 10px;border-radius:6px;font-size:13px;width:100%;outline:none}
+.fp-input:focus{border-color:var(--purple)}
+.fp-input::placeholder{color:var(--dim)}
+.fp-chips{display:flex;flex-wrap:wrap;gap:4px}
+.fchip{font-size:11px;font-weight:600;padding:3px 8px;border-radius:99px;cursor:pointer;background:var(--bg);border:1px solid var(--border2);color:var(--muted);transition:all .12s}
+.fchip:hover{border-color:var(--purple);color:var(--purple)}
+.fchip.active{background:var(--purple10);border-color:var(--purple);color:var(--purple)}
+.fp-checks{display:flex;flex-direction:column;gap:6px}
+.fcheck{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);cursor:pointer}
+.fcheck input{accent-color:var(--purple);cursor:pointer}
+.fp-btn{background:var(--bg);border:1px solid var(--border2);color:var(--muted);padding:5px 10px;border-radius:5px;font-size:12px;cursor:pointer;transition:all .12s}
+.fp-btn:hover{border-color:var(--purple);color:var(--purple)}
+.fp-reset{width:100%;color:var(--error)!important;border-color:rgba(192,57,43,.3)!important}
+.pivot-main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.pivot-toolbar{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:var(--surface);border-bottom:1px solid var(--border2);flex-shrink:0;box-shadow:0 1px 4px rgba(0,0,0,0.04)}
+.pt-left{display:flex;align-items:center;gap:10px}
+.pt-count{font-size:14px;font-weight:700;color:var(--purple)}
+.pt-divider{color:var(--dim)}
+.pt-info{font-size:12px;color:var(--muted)}
+.pt-right{display:flex;gap:8px}
+.pt-btn{background:var(--bg);border:1px solid var(--border2);color:var(--muted);padding:5px 11px;border-radius:5px;font-size:12px;cursor:pointer;transition:all .12s}
+.pt-btn:hover{border-color:var(--purple);color:var(--purple)}
+.pivot-scroll{flex:1;overflow:auto}
+.pvt{width:100%;border-collapse:collapse;table-layout:fixed}
+.pvt thead{position:sticky;top:0;z-index:10}
+.pvt thead th{background:var(--surface2);color:var(--text);font-size:13px;letter-spacing:.3px;font-weight:700;padding:10px 10px;text-align:left;border-bottom:2px solid var(--border);white-space:nowrap;user-select:none}
+.pvt thead th.sortable{cursor:pointer}
+.pvt thead th.sortable:hover{color:var(--purple);background:var(--purple10)}
+.pvt thead th.sorted-asc,.pvt thead th.sorted-desc{color:var(--purple)!important;background:var(--purple10)!important}
+.sort-ic{color:var(--dim);font-size:11px;margin-left:3px}
+.pvt tbody tr{border-bottom:1px solid var(--border2);transition:background .1s;cursor:default}
+.pvt tbody tr:hover{background:rgba(199,74,212,.04)}
+.pvt tbody tr.selected{background:var(--purple10)!important}
+.pvt tbody tr.has-dev td.ph-key code{color:var(--purple)!important;background:var(--lyellow)!important}
+.pvt td.cell-present{text-align:center;padding:7px 4px;width:72px}
+.pvt td.cell-missing{text-align:center;padding:7px 4px;width:72px;background:repeating-linear-gradient(45deg,#e8e8e8,#e8e8e8 4px,#f5f5f5 4px,#f5f5f5 8px)}
+.ph-key{width:220px;padding:7px 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ph-key code{font-family:'JetBrains Mono','Fira Code',monospace;font-size:12px;color:var(--purple);background:rgba(199,74,212,.07);padding:2px 5px;border-radius:3px}
+.ph-name{width:360px;padding:7px 10px;color:var(--text);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ver-prefix{font-size:10px;font-weight:700;color:var(--purple);background:var(--purple10);border:1px solid rgba(199,74,212,.2);padding:1px 5px;border-radius:3px;margin-right:5px;letter-spacing:.3px;white-space:nowrap}
+.pvt th.col-ver{width:72px;text-align:center}
+.col-WPp{color:var(--purple)!important}
+.col-TYp{color:#6b7c00!important}
+.col-LYp{color:#3d7a8a!important}
+.col-LLYp{color:#4a6a7a!important}
+.col-BDGTp{color:#8a3a9a!important}
+.col-FCSTop{color:#b06000!important}
+.col-tkey{width:200px;padding:7px 10px;color:var(--dim);font-size:11px;font-family:monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.col-cnt{width:130px;text-align:center;padding:7px 6px;font-size:13px;white-space:nowrap}
+.cnt-badge{display:inline-block;min-width:40px;padding:2px 8px;border-radius:99px;font-size:12px;font-weight:700;text-align:center}
+.cnt-6  {background:rgba(58,117,0,.12);color:var(--ok-text)}
+.cnt-low{background:rgba(199,74,212,.12);color:var(--purple)}
+.cnt-mid{background:rgba(166,184,187,.2);color:#2a6a7a}
+.empty-state{padding:60px;text-align:center;color:var(--dim)}
+.empty-icon{font-size:36px;margin-bottom:12px}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:var(--surface2)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--purple)}
+</style>
+</head>
+<body>
+
+<!-- TOP HEADER -->
+<div class="top-hdr">
+  <div class="hdr-row1">
+    <span class="logo-dot"></span>
+    <span class="brand">invent.ai</span>
+    <span class="page-title">MFRM KPI Reference</span>
+    <div class="stats-inline">
+      <div class="si s-purple"><span class="si-val">97</span><span class="si-lbl">Total KPIs</span></div>
+      <div class="si-div"></div>
+      <div class="si s-green"><span class="si-val">49</span><span class="si-lbl">All 6 Versions</span></div>
+      <div class="si-div"></div>
+      <div class="si s-warn"><span class="si-val">48</span><span class="si-lbl">Deviations</span></div>
+      <div class="si-div"></div>
+      <div class="si s-green"><span class="si-val">0</span><span class="si-lbl">Type Issues</span></div>
+      <div class="si-div"></div>
+      <div class="si s-green"><span class="si-val">✓</span><span class="si-lbl">LY=LLY</span></div>
+      <div class="si-div"></div>
+      <div class="si s-green"><span class="si-val">✓</span><span class="si-lbl">BDGT=FCST</span></div>
+    </div>
+  </div>
+  <div class="legend-bar">
+    <span class="leg-lbl">Types</span>
+    <div class="leg-item"><span class="lsw" style="background:#F9EDFB;color:#8a1a9a;border:1px solid rgba(199,74,212,.3)">$R</span>Retail</div>
+    <div class="leg-item"><span class="lsw" style="background:#EEFDAE;color:#4a5c00;border:1px solid rgba(199,225,85,.5)">$C</span>Cost</div>
+    <div class="leg-item"><span class="lsw" style="background:#EFFAFD;color:#2a6a7a;border:1px solid rgba(166,184,187,.5)">%</span>Pct</div>
+    <div class="leg-item"><span class="lsw" style="background:#F9EDFB;color:#8a3a9a;border:1px solid rgba(227,165,233,.5)">U</span>Unit</div>
+    <div class="leg-item"><span class="lsw" style="background:#F8FDE8;color:#5a6e00;border:1px solid rgba(199,225,85,.4)">I</span>Index</div>
+    <div class="leg-item"><span class="lsw" style="background:#EFFAFD;color:#2a5a6a;border:1px solid rgba(166,184,187,.4)">B</span>Bool</div>
+    <div class="leg-item"><span class="lmiss"></span>absent</div>
+  </div>
+  <div class="tab-bar">
+    <button class="tab-btn active" id="tb-overview" onclick="switchTab('overview')">📋 Overview</button>
+    <button class="tab-btn"        id="tb-pivot"    onclick="switchTab('pivot')">⊞ KPI Pivot</button>
+    <button class="tab-btn"        id="tb-sanity"   onclick="switchTab('sanity')">🔍 Sanity Check</button>
+  </div>
+</div>
+
+<!-- ══ OVERVIEW TAB ══ -->
+<div class="tab-pane" id="tab-overview" style="display:block">
+<div class="tab-inner">
+
+  <!-- Purpose -->
+  <div class="ov-section">
+    <div class="ov-section-title">🎯 Purpose</div>
+    <div class="purpose-grid">
+      <div class="p-card">
+        <div class="p-card-icon">🗺️</div>
+        <div class="p-card-title">Single Source of Truth</div>
+        <div class="p-card-desc">All 97 KPIs and their version applicability in one place — no more hunting through config files or spreadsheets.</div>
+      </div>
+      <div class="p-card">
+        <div class="p-card-icon">⚙️</div>
+        <div class="p-card-title">Developer Configuration Aid</div>
+        <div class="p-card-desc">Instantly see which versions (WP, TY, LY, LLY, BDGT, FCST) each KPI must be wired to during implementation or QA.</div>
+      </div>
+      <div class="p-card">
+        <div class="p-card-icon">🏷️</div>
+        <div class="p-card-title">Type Enforcement Guide</div>
+        <div class="p-card-desc">Enforces naming conventions: <code style="font-size:11px;background:#F9EDFB;color:#8a1a9a;padding:1px 4px;border-radius:3px">_r</code> = Retail $, <code style="font-size:11px;background:#EEFDAE;color:#4a5c00;padding:1px 4px;border-radius:3px">_c</code> = Cost $, <code style="font-size:11px;background:#EFFAFD;color:#2a6a7a;padding:1px 4px;border-radius:3px">_p</code> = %, etc.</div>
+      </div>
+      <div class="p-card">
+        <div class="p-card-icon">🔗</div>
+        <div class="p-card-title">Pair Consistency Rules</div>
+        <div class="p-card-desc">Validates that LY = LLY and BDGT = FCST always carry the same KPI set — mismatches surface immediately.</div>
+      </div>
+      <div class="p-card">
+        <div class="p-card-icon">🔍</div>
+        <div class="p-card-title">Deviation Detection</div>
+        <div class="p-card-desc">Highlights KPIs that are intentionally absent from certain versions so developers know what <em>not</em> to configure.</div>
+      </div>
+      <div class="p-card">
+        <div class="p-card-icon">📤</div>
+        <div class="p-card-title">Exportable &amp; Shareable</div>
+        <div class="p-card-desc">Export any filtered view as CSV from the KPI Pivot tab for offline review or ticket attachments.</div>
+      </div>
+    </div>
+    <div class="ov-note">
+      <strong>Note for developers:</strong> Unless a KPI appears in the <em>deviation sections</em> of the Sanity Check tab, assume it is applicable to <strong>all 6 versions</strong>. Deviations are intentional and documented — do not add missing KPIs without confirming with the product team.
+    </div>
+  </div>
+
+  <!-- Type Rules -->
+  <div class="ov-section">
+    <div class="ov-section-title">🏷️ KPI Naming Convention — Suffix → Type Rules</div>
+    <div class="rules-grid">
+      <div class="rule-chip"><span class="rule-suf">_r</span><span class="rule-arrow">→</span><span class="rule-type">dollarsRetailTwoDecimals</span></div>
+      <div class="rule-chip"><span class="rule-suf">_c</span><span class="rule-arrow">→</span><span class="rule-type">dollarsCostTwoDecimals</span></div>
+      <div class="rule-chip"><span class="rule-suf">_p</span><span class="rule-arrow">→</span><span class="rule-type">percentageTwoDecimals</span></div>
+      <div class="rule-chip"><span class="rule-suf">_u</span><span class="rule-arrow">→</span><span class="rule-type">unit</span></div>
+      <div class="rule-chip"><span class="rule-suf">_i</span><span class="rule-arrow">→</span><span class="rule-type">index</span></div>
+      <div class="rule-chip"><span class="rule-suf">_b</span><span class="rule-arrow">→</span><span class="rule-type">boolean</span></div>
+    </div>
+    <p style="font-size:12px;color:var(--muted);margin-top:12px">All 97 KPIs have been validated against these rules. <strong style="color:var(--ok-text)">0 violations found</strong> in the current dataset.</p>
+  </div>
+
+  <!-- How to Use -->
+  <div class="ov-section">
+    <div class="ov-section-title">📖 How to Use</div>
+    <div class="how-steps">
+      <div class="how-step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <div class="step-title">Start with the KPI Pivot tab for lookup</div>
+          <div class="step-desc">Use the search box to find any KPI by key or name. The version prefix on each row (e.g., <span style="font-size:11px;font-weight:700;color:var(--purple);background:var(--purple10);padding:1px 5px;border-radius:3px;border:1px solid rgba(199,74,212,.2)">WP/BDGT/FCST</span>) tells you exactly which versions it belongs to.</div>
+          <div class="step-tags"><span class="step-tag">Search</span><span class="step-tag">Filter by format</span><span class="step-tag">Sort columns</span><span class="step-tag">Export CSV</span></div>
+        </div>
+      </div>
+      <div class="how-step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <div class="step-title">Use filters to narrow down your context</div>
+          <div class="step-desc">Filter by number format ($R, $C, %, U, I, B) to see all KPIs of a specific type. Tick version checkboxes to show only KPIs present in the versions you're working on. Toggle <strong>Deviations only</strong> to see non-universal KPIs.</div>
+        </div>
+      </div>
+      <div class="how-step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <div class="step-title">Check the Sanity Check tab to understand deviations</div>
+          <div class="step-desc">The matrix groups KPIs by their deviation pattern. Green sections are healthy (all 6 versions). Purple/warning sections show intentional gaps — these are by design and should be respected during configuration.</div>
+          <div class="step-tags"><span class="step-tag">LY=LLY check</span><span class="step-tag">BDGT=FCST check</span><span class="step-tag">Type validation</span></div>
+        </div>
+      </div>
+      <div class="how-step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <div class="step-title">Refresh when the source sheet changes</div>
+          <div class="step-desc">The data source is a Google Sheet maintained by the product team. Use the Refresh button below to open it. When the sheet is updated, re-generate this artifact using the Python script in the repo.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="refresh-row">
+      <button class="btn-refresh" onclick="document.getElementById('refreshModal').classList.add('open')">
+        🔄 How to Refresh This Artifact
+      </button>
+      <a class="btn-sheets" href="https://docs.google.com/spreadsheets/d/1vVC6C5UR78pNttTeMtKKdnUpUa1GBYQmdN61vQH_Qk8/edit#gid=1703237684" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center;gap:6px">
+        📊 Open Source Google Sheet
+      </a>
+      <span class="refresh-hint">Last generated from: MFRM MASTER KPI MAPPING · Sheet ID 1703237684</span>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ══ PIVOT TAB ══ -->
+<div class="tab-pane" id="tab-pivot" style="display:none">
+<div class="pivot-shell">
+  <div class="filter-panel" id="filterPanel">
+    <div class="fp-section"><div class="fp-title">🔍 Search</div>
+      <input class="fp-input" id="searchInput" type="text" placeholder="KPI key or name…" oninput="applyFilters()"></div>
+    <div class="fp-section"><div class="fp-title">Number Format</div>
+      <div class="fp-chips" id="fmtFilter"><span class="fchip active" data-fmt="ALL" onclick="toggleChip(this,'fmt')">All</span><span class="fchip" data-fmt="dollarsRetailTwoDecimals" onclick="toggleChip(this,'fmt')">$R Retail</span><span class="fchip" data-fmt="dollarsCostTwoDecimals" onclick="toggleChip(this,'fmt')">$C Cost</span><span class="fchip" data-fmt="percentageTwoDecimals" onclick="toggleChip(this,'fmt')">% Pct</span><span class="fchip" data-fmt="unit" onclick="toggleChip(this,'fmt')">U Unit</span><span class="fchip" data-fmt="index" onclick="toggleChip(this,'fmt')">I Index</span><span class="fchip" data-fmt="boolean" onclick="toggleChip(this,'fmt')">B Bool</span></div></div>
+    <div class="fp-section"><div class="fp-title">Version Presence</div>
+      <div class="fp-checks" id="verFilter"><label class="fcheck"><input type="checkbox" value="WP" onchange="applyFilters()" checked> WP</label><label class="fcheck"><input type="checkbox" value="TY" onchange="applyFilters()" checked> TY</label><label class="fcheck"><input type="checkbox" value="LY" onchange="applyFilters()" checked> LY</label><label class="fcheck"><input type="checkbox" value="LLY" onchange="applyFilters()" checked> LLY</label><label class="fcheck"><input type="checkbox" value="BDGT" onchange="applyFilters()" checked> BDGT</label><label class="fcheck"><input type="checkbox" value="FCST" onchange="applyFilters()" checked> FCST</label></div>
+      <div style="display:flex;gap:6px;margin-top:8px">
+        <button class="fp-btn" onclick="setAllVersions(true)">All</button>
+        <button class="fp-btn" onclick="setAllVersions(false)">None</button>
+      </div></div>
+    <div class="fp-section"><div class="fp-title">Options</div><div class="fp-checks">
+      <label class="fcheck"><input type="checkbox" id="devOnly" onchange="applyFilters()"> Deviations only</label>
+      <label class="fcheck"><input type="checkbox" id="uiOnly" onchange="applyFilters()"> UI visible in any version</label>
+    </div></div>
+    <div class="fp-section"><div class="fp-title">Extra Columns</div><div class="fp-checks" id="colToggle">
+      <label class="fcheck"><input type="checkbox" class="col-vis" data-col="col-tkey" onchange="toggleCol(this)"> Translation Key</label>
+      <label class="fcheck"><input type="checkbox" class="col-vis" data-col="col-ui-WP" onchange="toggleCol(this)"> UI: WP</label><label class="fcheck"><input type="checkbox" class="col-vis" data-col="col-ui-TY" onchange="toggleCol(this)"> UI: TY</label><label class="fcheck"><input type="checkbox" class="col-vis" data-col="col-ui-LY" onchange="toggleCol(this)"> UI: LY</label><label class="fcheck"><input type="checkbox" class="col-vis" data-col="col-ui-LLY" onchange="toggleCol(this)"> UI: LLY</label><label class="fcheck"><input type="checkbox" class="col-vis" data-col="col-ui-BDGT" onchange="toggleCol(this)"> UI: BDGT</label><label class="fcheck"><input type="checkbox" class="col-vis" data-col="col-ui-FCST" onchange="toggleCol(this)"> UI: FCST</label>
+    </div></div>
+    <div class="fp-section"><button class="fp-btn fp-reset" onclick="resetFilters()">↺ Reset all</button></div>
+  </div>
+
+  <div class="pivot-main">
+    <div class="pivot-toolbar">
+      <div class="pt-left">
+        <span class="pt-count" id="rowCount">97 KPIs</span>
+        <span class="pt-divider">|</span>
+        <span class="pt-info" id="activeFiltersInfo"></span>
+      </div>
+      <div class="pt-right" style="display:flex;align-items:center;gap:8px">
+        <div id="lastUpdatedCard" style="display:flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:5px 12px;font-size:11.5px;color:var(--muted);white-space:nowrap">
+          <span style="color:var(--purple);font-size:13px">🕒</span>
+          <span>Last Updated: <strong id="lastUpdatedTime">—</strong></span>
+        </div>
+        <button class="pt-btn" id="refreshBtn" onclick="liveRefresh()" style="background:var(--purple);color:#fff;border-color:var(--purple);display:flex;align-items:center;gap:5px">
+          <span id="refreshSpinner" style="display:none">⏳</span><span id="refreshLabel">🔄 Refresh</span>
+        </button>
+        <button class="pt-btn" onclick="exportCSV()">⬇ CSV</button>
+        <button class="pt-btn" id="toggleFP" onclick="toggleFilterPanel()">◀ Filters</button>
+      </div>
+    </div>
+    <div class="pivot-scroll">
+      <table class="pvt" id="pivotTable">
+        <thead><tr id="pivotHead">
+          <th class="ph-key sortable" data-col="base_key" onclick="sortBy('base_key')">KPI Key <span class="sort-ic" id="si-base_key">↕</span></th>
+          <th class="ph-name sortable" data-col="metric_name" onclick="sortBy('metric_name')">Metric Name <span class="sort-ic" id="si-metric_name">↕</span></th>
+          <th class="col-ver col-WP sortable" data-col="fmt_WP" onclick="sortBy('fmt_WP')">WP <span class="sort-ic" id="si-fmt_WP">↕</span></th><th class="col-ver col-TY sortable" data-col="fmt_TY" onclick="sortBy('fmt_TY')">TY <span class="sort-ic" id="si-fmt_TY">↕</span></th><th class="col-ver col-LY sortable" data-col="fmt_LY" onclick="sortBy('fmt_LY')">LY <span class="sort-ic" id="si-fmt_LY">↕</span></th><th class="col-ver col-LLY sortable" data-col="fmt_LLY" onclick="sortBy('fmt_LLY')">LLY <span class="sort-ic" id="si-fmt_LLY">↕</span></th><th class="col-ver col-BDGT sortable" data-col="fmt_BDGT" onclick="sortBy('fmt_BDGT')">BDGT <span class="sort-ic" id="si-fmt_BDGT">↕</span></th><th class="col-ver col-FCST sortable" data-col="fmt_FCST" onclick="sortBy('fmt_FCST')">FCST <span class="sort-ic" id="si-fmt_FCST">↕</span></th>
+          <th class="col-ui-WP" style="display:none">UI:WP</th><th class="col-ui-TY" style="display:none">UI:TY</th><th class="col-ui-LY" style="display:none">UI:LY</th><th class="col-ui-LLY" style="display:none">UI:LLY</th><th class="col-ui-BDGT" style="display:none">UI:BDGT</th><th class="col-ui-FCST" style="display:none">UI:FCST</th>
+          <th class="col-cnt sortable" data-col="present_count" onclick="sortBy('present_count')">No. of Versions <span class="sort-ic" id="si-present_count">↕</span></th>
+        </tr></thead>
+        <tbody id="pivotBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ══ SANITY CHECK TAB ══ -->
+<div class="tab-pane" id="tab-sanity" style="display:none">
+<div class="sanity-inner">
+  <div class="ccbar">
+    <div class="cc pass"><span class="cc-ico">🔗</span>
+      <div><div class="cc-lbl">LY ↔ LLY Parity</div><div class="cc-desc">Identical 53 KPIs &amp; types</div></div>
+      <span class="cc-status">PASS ✓</span></div>
+    <div class="cc pass"><span class="cc-ico">🔗</span>
+      <div><div class="cc-lbl">BDGT ↔ FCST Parity</div><div class="cc-desc">Identical 86 KPIs &amp; types</div></div>
+      <span class="cc-status">PASS ✓</span></div>
+    <div class="cc pass"><span class="cc-ico">🏷</span>
+      <div><div class="cc-lbl">Suffix → Type Rules</div><div class="cc-desc">All _r _c _i _b _u _p correct</div></div>
+      <span class="cc-status">PASS ✓</span></div>
+  </div>
+  <div class="slabel">KPI Coverage Matrix — 6 Versions × 97 KPIs</div>
+  <div class="sec"><div class="sec-hdr sec-ok" onclick="tog('b-all6')"><span class="sic ok-ic">✓</span><span class="stitle">Present in all 6 versions — no deviations</span><span class="scnt cnt-ok">49 KPIs</span><span class="chev" id="c-b-all6">▶</span></div><div class="sec-body" id="b-all6" style="display:none"><table class="kt"><thead><tr><th class="col-key">KPI Key</th><th class="col-name">Metric Name</th><th class="col-ver col-WP">WP</th><th class="col-ver col-TY">TY</th><th class="col-ver col-LY">LY</th><th class="col-ver col-LLY">LLY</th><th class="col-ver col-BDGT">BDGT</th><th class="col-ver col-FCST">FCST</th><th class="col-exp">Expected</th></tr></thead><tbody><tr class="row-ok"><td class="col-key"><code>13wk_avg_sls_u</code></td><td class="col-name">13 WK Average Sales U</td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="col-exp"><span class="ebadge type-unit">U</span></td></tr>
+<tr class="row-ok"><td class="col-key"><code>auc</code></td><td class="col-name">AUC</td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="col-exp"><span class="exp-na">—</span></td></tr>
+<tr class="row-ok"><td class="col-key"><code>avg_inv_c</code></td><td class="col-name">Average Inventory Cost $</td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="col-exp"><span class="ebadge type-cost">$C</span></td></tr>
+<tr class="row-ok"><td class="col-key"><code>avg_inv_u</code></td><td class="col-name">Average Inventory U</td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="col-exp"><span class="ebadge type-unit">U</span></td></tr>
+<tr class="row-ok"><td class="col-key"><code>bop_c</code></td><td class="col-name">BOP Cost $</td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="col-exp"><span class="ebadge type-cost">$C</span></td></tr>
+<tr class="row-ok"><td class="col-key"><code>bop_u</code></td><td class="col-name">BOP U</td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="col-exp"><span class="ebadge type-unit">U</span></td></tr>
+<tr class="row-ok"><td class="col-key"><code>eop_c</code></td><td class="col-name">EOP Cost $</td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="col-exp"><span class="ebadge type-cost">$C</span></td></tr>
+<tr class="row-ok"><td class="col-key"><code>eop_u</code></td><td class="col-name">EOP U</td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="col-exp"><span class="ebadge type-unit">U</span></td></tr>
+<tr class="row-ok"><td class="col-key"><code>fnl_attch_p</code></td><td class="col-name">Finalized Attach Rate</td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="col-exp"><span class="ebadge type-pct">%</span></td></tr>
+<tr class="row-ok"><td class="col-key"><code>fnl_ausp</code></td><td class="col-name">Finalized AUSP</td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="col-exp"><span class="exp-na">—</span></td></tr>
+<tr class="row-ok"><td class="col-key"><code>fnl_bos_p</code></td><td class="col-name">Finalized BOS %</td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="col-exp"><span class="ebadge type-pct">%</span></td></tr>
+<tr class="row-ok"><td class="col-key"><code>fnl_cm_p</code></td><td class="col-name">Finalized Core Margin %</td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="col-exp"><span class="ebadge type-pct">%</span></td></tr>
+<tr class="row-ok"><td class="col-key"><code>fnl_cm_r</code></td><td class="col-name">Finalized Core Margin $</td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="col-exp"><span class="ebadge type-retail">$R</span></td></tr>
+<tr class="row-ok"><td class="col-key"><code>fnl_cogs_c</code></td><td class="col-name">Finalized COGS $</td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="col-exp"><span class="ebadge type-cost">$C</span></td></tr>
+<tr class="row-ok"><td class="col-key"><code>fnl_retrn_sls_r</code></td><td class="col-name">Finalized Return Sales Retail $</td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="col-exp"><span class="ebadge type-retail">$R</span></td></tr>
+<tr class="row-ok"><td class="col-key"><code>fnl_retrn_sls_r_p</code></td><td class="col-name">Finalized Return Sales Retail %</td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="col-exp"><span class="ebadge type-pct">%</span></td></tr>
+<tr class="row-ok"><td class="col-key"><code>fnl_retrn_sls_u</code></td><td class="col-name">Finalized Return Sales U</td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="col-exp"><span class="ebadge type-unit">U</span></td></tr>
+<tr class="row-ok"><td class="col-key"><code>fnl_retrn_sls_u_p</code></td><td class="col-name">Finalized Return Sales U %</td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="col-exp"><span class="ebadge type-pct">%</span></td></tr>
+<tr class="row-ok"><td class="col-key"><code>fnl_sls_r</code></td><td class="col-name">Finalized Sales Retail $</td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="col-exp"><span class="ebadge type-retail">$R</span></td></tr>
+<tr class="row-ok"><td class="col-key"><code>fnl_sls_u</code></td><td class="col-name">Finalized Sales Units</td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="col-exp"><span class="ebadge type-unit">U</span></td></tr>
+<tr class="row-ok"><td class="col-key"><code>fnl_tc_p</code></td><td class="col-name">Finalized TC %</td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="col-exp"><span class="ebadge type-pct">%</span></td></tr>
+<tr class="row-ok"><td class="col-key"><code>fnl_tc_r</code></td><td class="col-name">Finalized TC $</td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="col-exp"><span class="ebadge type-retail">$R</span></td></tr>
+<tr class="row-ok"><td class="col-key"><code>fnl_tc_roi_i</code></td><td class="col-name">Finalized TC ROI</td><td class="cell-present type-idx"><span class="tbadge">I</span></td><td class="cell-present type-idx"><span class="tbadge">I</span></td><td class="cell-present type-idx"><span class="tbadge">I</span></td><td class="cell-present type-idx"><span class="tbadge">I</span></td><td class="cell-present type-idx"><span class="tbadge">I</span></td><td class="cell-present type-idx"><span class="tbadge">I</span></td><td class="col-exp"><span class="ebadge type-idx">I</span></td></tr>
+<tr class="row-ok"><td class="col-key"><code>fnl_vi_p</code></td><td class="col-name">Finalized VI %</td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="col-exp"><span class="ebadge type-pct">%</span></td></tr>
+<tr class="row-ok"><td class="col-key"><code>fnl_vi_r</code></td><td class="col-name">Finalized VI $</td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="col-exp"><span class="ebadge type-retail">$R</span></td></tr>
+<tr class="row-ok"><td class="col-key"><code>fwos_i</code></td><td class="col-name">FWOS</td><td class="cell-present type-idx"><span class="tbadge">I</span></td><td class="cell-present type-idx"><span class="tbadge">I</span></td><td class="cell-present type-idx"><span class="tbadge">I</span></td><td class="cell-present type-idx"><span class="tbadge">I</span></td><td class="cell-present type-idx"><span class="tbadge">I</span></td><td class="cell-present type-idx"><span class="tbadge">I</span></td><td class="col-exp"><span class="ebadge type-idx">I</span></td></tr>
+<tr class="row-ok"><td class="col-key"><code>rcpt_c</code></td><td class="col-name">Receipts Cost $</td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="col-exp"><span class="ebadge type-cost">$C</span></td></tr>
+<tr class="row-ok"><td class="col-key"><code>rcpt_u</code></td><td class="col-name">Receipts U</td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="col-exp"><span class="ebadge type-unit">U</span></td></tr>
+<tr class="row-ok"><td class="col-key"><code>s2s_i</code></td><td class="col-name">S2S Ratio</td><td class="cell-present type-idx"><span class="tbadge">I</span></td><td class="cell-present type-idx"><span class="tbadge">I</span></td><td class="cell-present type-idx"><span class="tbadge">I</span></td><td class="cell-present type-idx"><span class="tbadge">I</span></td><td class="cell-present type-idx"><span class="tbadge">I</span></td><td class="cell-present type-idx"><span class="tbadge">I</span></td><td class="col-exp"><span class="ebadge type-idx">I</span></td></tr>
+<tr class="row-ok"><td class="col-key"><code>shrnk_c</code></td><td class="col-name">Shrink Cost $</td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="col-exp"><span class="ebadge type-cost">$C</span></td></tr>
+<tr class="row-ok"><td class="col-key"><code>shrnk_u</code></td><td class="col-name">Shrink U</td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="col-exp"><span class="ebadge type-unit">U</span></td></tr>
+<tr class="row-ok"><td class="col-key"><code>turn_c_i</code></td><td class="col-name">Monthly Turn (Cost)</td><td class="cell-present type-idx"><span class="tbadge">I</span></td><td class="cell-present type-idx"><span class="tbadge">I</span></td><td class="cell-present type-idx"><span class="tbadge">I</span></td><td class="cell-present type-idx"><span class="tbadge">I</span></td><td class="cell-present type-idx"><span class="tbadge">I</span></td><td class="cell-present type-idx"><span class="tbadge">I</span></td><td class="col-exp"><span class="ebadge type-idx">I</span></td></tr>
+<tr class="row-ok"><td class="col-key"><code>turn_u_i</code></td><td class="col-name">Monthly Turn (Units)</td><td class="cell-present type-idx"><span class="tbadge">I</span></td><td class="cell-present type-idx"><span class="tbadge">I</span></td><td class="cell-present type-idx"><span class="tbadge">I</span></td><td class="cell-present type-idx"><span class="tbadge">I</span></td><td class="cell-present type-idx"><span class="tbadge">I</span></td><td class="cell-present type-idx"><span class="tbadge">I</span></td><td class="col-exp"><span class="ebadge type-idx">I</span></td></tr>
+<tr class="row-ok"><td class="col-key"><code>wrn_attch_p</code></td><td class="col-name">Written Attach Rate</td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="col-exp"><span class="ebadge type-pct">%</span></td></tr>
+<tr class="row-ok"><td class="col-key"><code>wrn_ausp</code></td><td class="col-name">Written AUSP</td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="col-exp"><span class="exp-na">—</span></td></tr>
+<tr class="row-ok"><td class="col-key"><code>wrn_bos_p</code></td><td class="col-name">Written BOS %</td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="col-exp"><span class="ebadge type-pct">%</span></td></tr>
+<tr class="row-ok"><td class="col-key"><code>wrn_cm_p</code></td><td class="col-name">Written Core Margin %</td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="col-exp"><span class="ebadge type-pct">%</span></td></tr>
+<tr class="row-ok"><td class="col-key"><code>wrn_cm_r</code></td><td class="col-name">Written Core Margin $</td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="col-exp"><span class="ebadge type-retail">$R</span></td></tr>
+<tr class="row-ok"><td class="col-key"><code>wrn_cogs_c</code></td><td class="col-name">Written COGS $</td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="col-exp"><span class="ebadge type-cost">$C</span></td></tr>
+<tr class="row-ok"><td class="col-key"><code>wrn_retrn_sls_r</code></td><td class="col-name">Written Return Sales Retail $</td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="col-exp"><span class="ebadge type-retail">$R</span></td></tr>
+<tr class="row-ok"><td class="col-key"><code>wrn_retrn_sls_r_p</code></td><td class="col-name">Written Return Sales Retail %</td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="col-exp"><span class="ebadge type-pct">%</span></td></tr>
+<tr class="row-ok"><td class="col-key"><code>wrn_retrn_sls_u</code></td><td class="col-name">Written Return Sales U</td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="col-exp"><span class="ebadge type-unit">U</span></td></tr>
+<tr class="row-ok"><td class="col-key"><code>wrn_retrn_sls_u_p</code></td><td class="col-name">Written Return Sales U %</td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="col-exp"><span class="ebadge type-pct">%</span></td></tr>
+<tr class="row-ok"><td class="col-key"><code>wrn_sls_r</code></td><td class="col-name">Written Sales Retail $</td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="col-exp"><span class="ebadge type-retail">$R</span></td></tr>
+<tr class="row-ok"><td class="col-key"><code>wrn_sls_u</code></td><td class="col-name">Written Sales Units</td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="col-exp"><span class="ebadge type-unit">U</span></td></tr>
+<tr class="row-ok"><td class="col-key"><code>wrn_tc_p</code></td><td class="col-name">Written TC %</td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="col-exp"><span class="ebadge type-pct">%</span></td></tr>
+<tr class="row-ok"><td class="col-key"><code>wrn_tc_r</code></td><td class="col-name">Written TC $</td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="col-exp"><span class="ebadge type-retail">$R</span></td></tr>
+<tr class="row-ok"><td class="col-key"><code>wrn_vi_p</code></td><td class="col-name">Written VI %</td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="col-exp"><span class="ebadge type-pct">%</span></td></tr>
+<tr class="row-ok"><td class="col-key"><code>wrn_vi_r</code></td><td class="col-name">Written VI $</td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="col-exp"><span class="ebadge type-retail">$R</span></td></tr>
+</tbody></table></div></div><div class="sec"><div class="sec-hdr sec-w1" onclick="tog('b-TY')"><span class="sic warn-ic">⚠</span><span class="stitle">Missing from TY only</span><span class="scnt cnt-warn">4 KPIs</span><div class="chips"><span class="chip">TY</span></div><span class="chev open" id="c-b-TY">▶</span></div><div class="sec-body" id="b-TY"><table class="kt"><thead><tr><th class="col-key">KPI Key</th><th class="col-name">Metric Name</th><th class="col-ver col-WP">WP</th><th class="col-ver col-TY col-absent">TY</th><th class="col-ver col-LY">LY</th><th class="col-ver col-LLY">LLY</th><th class="col-ver col-BDGT">BDGT</th><th class="col-ver col-FCST">FCST</th><th class="col-exp">Expected</th></tr></thead><tbody><tr class="row-dev"><td class="col-key"><code>fnl_awros_r</code></td><td class="col-name">Finalized AWROS</td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="col-exp"><span class="ebadge type-retail">$R</span></td></tr>
+<tr class="row-dev"><td class="col-key"><code>stk2sls_c_i</code></td><td class="col-name">Stock to Sales (Cost)</td><td class="cell-present type-idx"><span class="tbadge">I</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-present type-idx"><span class="tbadge">I</span></td><td class="cell-present type-idx"><span class="tbadge">I</span></td><td class="cell-present type-idx"><span class="tbadge">I</span></td><td class="cell-present type-idx"><span class="tbadge">I</span></td><td class="col-exp"><span class="ebadge type-idx">I</span></td></tr>
+<tr class="row-dev"><td class="col-key"><code>stk2sls_u_i</code></td><td class="col-name">Stock to Sales (Units)</td><td class="cell-present type-idx"><span class="tbadge">I</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-present type-idx"><span class="tbadge">I</span></td><td class="cell-present type-idx"><span class="tbadge">I</span></td><td class="cell-present type-idx"><span class="tbadge">I</span></td><td class="cell-present type-idx"><span class="tbadge">I</span></td><td class="col-exp"><span class="ebadge type-idx">I</span></td></tr>
+<tr class="row-dev"><td class="col-key"><code>wrn_awros_r</code></td><td class="col-name">Written AWROS</td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="col-exp"><span class="ebadge type-retail">$R</span></td></tr>
+</tbody></table></div></div><div class="sec"><div class="sec-hdr sec-w2" onclick="tog('b-LLY_LY')"><span class="sic warn-ic">⚠</span><span class="stitle">Missing from LY &amp; LLY</span><span class="scnt cnt-warn">14 KPIs</span><div class="chips"><span class="chip">LLY</span><span class="chip">LY</span></div><span class="chev open" id="c-b-LLY_LY">▶</span></div><div class="sec-body" id="b-LLY_LY"><table class="kt"><thead><tr><th class="col-key">KPI Key</th><th class="col-name">Metric Name</th><th class="col-ver col-WP">WP</th><th class="col-ver col-TY">TY</th><th class="col-ver col-LY col-absent">LY</th><th class="col-ver col-LLY col-absent">LLY</th><th class="col-ver col-BDGT">BDGT</th><th class="col-ver col-FCST">FCST</th><th class="col-exp">Expected</th></tr></thead><tbody><tr class="row-dev"><td class="col-key"><code>fnl_sls_r_var_p</code></td><td class="col-name">Finalized Sales Retail % Var</td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="col-exp"><span class="ebadge type-pct">%</span></td></tr>
+<tr class="row-dev"><td class="col-key"><code>fnl_sls_u_diff_u</code></td><td class="col-name">Finalized Sales U Diff</td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="col-exp"><span class="ebadge type-unit">U</span></td></tr>
+<tr class="row-dev"><td class="col-key"><code>fnl_sls_u_var_p</code></td><td class="col-name">Finalized Sales U % Var</td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="col-exp"><span class="ebadge type-pct">%</span></td></tr>
+<tr class="row-dev"><td class="col-key"><code>oo_c</code></td><td class="col-name">On Order Cost $</td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="col-exp"><span class="ebadge type-cost">$C</span></td></tr>
+<tr class="row-dev"><td class="col-key"><code>oo_u</code></td><td class="col-name">On Order U</td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="col-exp"><span class="ebadge type-unit">U</span></td></tr>
+<tr class="row-dev"><td class="col-key"><code>shft_fnl_ausp</code></td><td class="col-name">Shifted Finalized AUSP</td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="col-exp"><span class="exp-na">—</span></td></tr>
+<tr class="row-dev"><td class="col-key"><code>shft_fnl_hdy_sls_r</code></td><td class="col-name">Shifted Finalized Holiday Sales Retail $</td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="col-exp"><span class="ebadge type-retail">$R</span></td></tr>
+<tr class="row-dev"><td class="col-key"><code>shft_fnl_hdy_sls_r_var_p</code></td><td class="col-name">Shifted Finalized Holiday Sales Retail % Var</td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="col-exp"><span class="ebadge type-pct">%</span></td></tr>
+<tr class="row-dev"><td class="col-key"><code>shft_wrn_ausp</code></td><td class="col-name">Shifted Written AUSP</td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="col-exp"><span class="exp-na">—</span></td></tr>
+<tr class="row-dev"><td class="col-key"><code>shft_wrn_hdy_sls_r</code></td><td class="col-name">Shifted Written Holiday Sales Retail $</td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="col-exp"><span class="ebadge type-retail">$R</span></td></tr>
+<tr class="row-dev"><td class="col-key"><code>shft_wrn_hdy_sls_r_var_p</code></td><td class="col-name">Shifted Written Holiday Sales Retail % Var</td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="col-exp"><span class="ebadge type-pct">%</span></td></tr>
+<tr class="row-dev"><td class="col-key"><code>wrn_sls_r_var_p</code></td><td class="col-name">Written Sales Retail % Var</td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="col-exp"><span class="ebadge type-pct">%</span></td></tr>
+<tr class="row-dev"><td class="col-key"><code>wrn_sls_u_diff_u</code></td><td class="col-name">Written Sales U Diff</td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="col-exp"><span class="ebadge type-unit">U</span></td></tr>
+<tr class="row-dev"><td class="col-key"><code>wrn_sls_u_var_p</code></td><td class="col-name">Written Sales U % Var</td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="col-exp"><span class="ebadge type-pct">%</span></td></tr>
+</tbody></table></div></div><div class="sec"><div class="sec-hdr sec-w3" onclick="tog('b-LLY_LY_TY')"><span class="sic warn-ic">⚠</span><span class="stitle">Missing from TY, LY &amp; LLY</span><span class="scnt cnt-warn">19 KPIs</span><div class="chips"><span class="chip">LLY</span><span class="chip">LY</span><span class="chip">TY</span></div><span class="chev open" id="c-b-LLY_LY_TY">▶</span></div><div class="sec-body" id="b-LLY_LY_TY"><table class="kt"><thead><tr><th class="col-key">KPI Key</th><th class="col-name">Metric Name</th><th class="col-ver col-WP">WP</th><th class="col-ver col-TY col-absent">TY</th><th class="col-ver col-LY col-absent">LY</th><th class="col-ver col-LLY col-absent">LLY</th><th class="col-ver col-BDGT">BDGT</th><th class="col-ver col-FCST">FCST</th><th class="col-exp">Expected</th></tr></thead><tbody><tr class="row-dev"><td class="col-key"><code>fnl_cmp_sls_p</code></td><td class="col-name">Finalized Comp Sales %</td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="col-exp"><span class="ebadge type-pct">%</span></td></tr>
+<tr class="row-dev"><td class="col-key"><code>fnl_cmp_sls_r</code></td><td class="col-name">Finalized Comp Sales Retail $</td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="col-exp"><span class="ebadge type-retail">$R</span></td></tr>
+<tr class="row-dev"><td class="col-key"><code>fnl_sls_r_diff</code></td><td class="col-name">Finalized Sales Retail $ Diff</td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="col-exp"><span class="exp-na">—</span></td></tr>
+<tr class="row-dev"><td class="col-key"><code>fnl_tc_r_diff_p</code></td><td class="col-name">Shifted Holiday Finalized TC %</td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="col-exp"><span class="ebadge type-pct">%</span></td></tr>
+<tr class="row-dev"><td class="col-key"><code>fnl_tc_r_var</code></td><td class="col-name">Finalized TC $ Var</td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="col-exp"><span class="exp-na">—</span></td></tr>
+<tr class="row-dev"><td class="col-key"><code>otb_adj_u</code></td><td class="col-name">OTB Adjustment U</td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="col-exp"><span class="ebadge type-unit">U</span></td></tr>
+<tr class="row-dev"><td class="col-key"><code>otb_c</code></td><td class="col-name">OTB Cost $</td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="col-exp"><span class="ebadge type-cost">$C</span></td></tr>
+<tr class="row-dev"><td class="col-key"><code>otb_u</code></td><td class="col-name">OTB U</td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="col-exp"><span class="ebadge type-unit">U</span></td></tr>
+<tr class="row-dev"><td class="col-key"><code>ots_c</code></td><td class="col-name">OTS Cost $</td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="col-exp"><span class="ebadge type-cost">$C</span></td></tr>
+<tr class="row-dev"><td class="col-key"><code>ots_u</code></td><td class="col-name">OTS U</td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="col-exp"><span class="ebadge type-unit">U</span></td></tr>
+<tr class="row-dev"><td class="col-key"><code>str_cmp_flg_b</code></td><td class="col-name">Store Comp Flag</td><td class="cell-present type-bool"><span class="tbadge">B</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-present type-bool"><span class="tbadge">B</span></td><td class="cell-present type-bool"><span class="tbadge">B</span></td><td class="col-exp"><span class="ebadge type-bool">B</span></td></tr>
+<tr class="row-dev"><td class="col-key"><code>tgt_eop_c</code></td><td class="col-name">Target EOP Cost $</td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="cell-present type-cost"><span class="tbadge">$C</span></td><td class="col-exp"><span class="ebadge type-cost">$C</span></td></tr>
+<tr class="row-dev"><td class="col-key"><code>tgt_eop_u</code></td><td class="col-name">Target EOP U</td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="cell-present type-unit"><span class="tbadge">U</span></td><td class="col-exp"><span class="ebadge type-unit">U</span></td></tr>
+<tr class="row-dev"><td class="col-key"><code>tgt_fwos_i</code></td><td class="col-name">Target FWOS</td><td class="cell-present type-idx"><span class="tbadge">I</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-present type-idx"><span class="tbadge">I</span></td><td class="cell-present type-idx"><span class="tbadge">I</span></td><td class="col-exp"><span class="ebadge type-idx">I</span></td></tr>
+<tr class="row-dev"><td class="col-key"><code>wrn_cmp_sls_p</code></td><td class="col-name">Written Comp Sales %</td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="col-exp"><span class="ebadge type-pct">%</span></td></tr>
+<tr class="row-dev"><td class="col-key"><code>wrn_cmp_sls_r</code></td><td class="col-name">Written Comp Sales Retail $</td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="col-exp"><span class="ebadge type-retail">$R</span></td></tr>
+<tr class="row-dev"><td class="col-key"><code>wrn_sls_r_diff</code></td><td class="col-name">Written Sales Retail $ Diff</td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="col-exp"><span class="exp-na">—</span></td></tr>
+<tr class="row-dev"><td class="col-key"><code>wrn_tc_r_diff_p</code></td><td class="col-name">Shifted Holiday Written TC %</td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="cell-present type-pct"><span class="tbadge">%</span></td><td class="col-exp"><span class="ebadge type-pct">%</span></td></tr>
+<tr class="row-dev"><td class="col-key"><code>wrn_tc_r_var</code></td><td class="col-name">Written TC $ Var</td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="col-exp"><span class="exp-na">—</span></td></tr>
+</tbody></table></div></div><div class="sec"><div class="sec-hdr sec-w4" onclick="tog('b-BDGT_FCST_LLY_LY_TY')"><span class="sic warn-ic">⚠</span><span class="stitle">WP only</span><span class="scnt cnt-warn">7 KPIs</span><div class="chips"><span class="chip">BDGT</span><span class="chip">FCST</span><span class="chip">LLY</span><span class="chip">LY</span><span class="chip">TY</span></div><span class="chev open" id="c-b-BDGT_FCST_LLY_LY_TY">▶</span></div><div class="sec-body" id="b-BDGT_FCST_LLY_LY_TY"><table class="kt"><thead><tr><th class="col-key">KPI Key</th><th class="col-name">Metric Name</th><th class="col-ver col-WP">WP</th><th class="col-ver col-TY col-absent">TY</th><th class="col-ver col-LY col-absent">LY</th><th class="col-ver col-LLY col-absent">LLY</th><th class="col-ver col-BDGT col-absent">BDGT</th><th class="col-ver col-FCST col-absent">FCST</th><th class="col-exp">Expected</th></tr></thead><tbody><tr class="row-dev"><td class="col-key"><code>bos_rdy_b</code></td><td class="col-name">BOS Readiness Flag</td><td class="cell-present type-bool"><span class="tbadge">B</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="col-exp"><span class="ebadge type-bool">B</span></td></tr>
+<tr class="row-dev"><td class="col-key"><code>cmpy_upld_fnl_fnc_tgt_sls_r</code></td><td class="col-name">Uploaded Finalized Finance Target Sales $</td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="col-exp"><span class="ebadge type-retail">$R</span></td></tr>
+<tr class="row-dev"><td class="col-key"><code>cmpy_upld_wrn_fnc_tgt_sls_r</code></td><td class="col-name">Uploaded Written Finance Target Sales $</td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="col-exp"><span class="ebadge type-retail">$R</span></td></tr>
+<tr class="row-dev"><td class="col-key"><code>pl_prev_upld_fnl_fnc_tgt_sls_r</code></td><td class="col-name">Previous Uploaded Finalized PL Finance Target Sales $</td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="col-exp"><span class="ebadge type-retail">$R</span></td></tr>
+<tr class="row-dev"><td class="col-key"><code>pl_prev_upld_wrn_fnc_tgt_sls_r</code></td><td class="col-name">Previous Uploaded Written PL Finance Target Sales $</td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="col-exp"><span class="ebadge type-retail">$R</span></td></tr>
+<tr class="row-dev"><td class="col-key"><code>pl_upld_fnl_fnc_tgt_sls_r</code></td><td class="col-name">Uploaded Finalized PL Finance Target Sales $</td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="col-exp"><span class="ebadge type-retail">$R</span></td></tr>
+<tr class="row-dev"><td class="col-key"><code>pl_upld_wrn_fnc_tgt_sls_r</code></td><td class="col-name">Uploaded Written PL Finance Target Sales $</td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="col-exp"><span class="ebadge type-retail">$R</span></td></tr>
+</tbody></table></div></div><div class="sec"><div class="sec-hdr sec-w5" onclick="tog('b-BDGT_FCST_LLY_LY_WP')"><span class="sic warn-ic">⚠</span><span class="stitle">TY only</span><span class="scnt cnt-warn">4 KPIs</span><div class="chips"><span class="chip">BDGT</span><span class="chip">FCST</span><span class="chip">LLY</span><span class="chip">LY</span><span class="chip">WP</span></div><span class="chev open" id="c-b-BDGT_FCST_LLY_LY_WP">▶</span></div><div class="sec-body" id="b-BDGT_FCST_LLY_LY_WP"><table class="kt"><thead><tr><th class="col-key">KPI Key</th><th class="col-name">Metric Name</th><th class="col-ver col-WP col-absent">WP</th><th class="col-ver col-TY">TY</th><th class="col-ver col-LY col-absent">LY</th><th class="col-ver col-LLY col-absent">LLY</th><th class="col-ver col-BDGT col-absent">BDGT</th><th class="col-ver col-FCST col-absent">FCST</th><th class="col-exp">Expected</th></tr></thead><tbody><tr class="row-dev"><td class="col-key"><code>fnl_sls_r_diff_r</code></td><td class="col-name">Finalized Sales Retail $ Diff</td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="col-exp"><span class="ebadge type-retail">$R</span></td></tr>
+<tr class="row-dev"><td class="col-key"><code>fnl_tc_r_diff_r</code></td><td class="col-name">Finalized TC $ Diff</td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="col-exp"><span class="ebadge type-retail">$R</span></td></tr>
+<tr class="row-dev"><td class="col-key"><code>wrn_sls_r_diff_r</code></td><td class="col-name">Written Sales Retail $ Diff</td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="col-exp"><span class="ebadge type-retail">$R</span></td></tr>
+<tr class="row-dev"><td class="col-key"><code>wrn_tc_r_diff_r</code></td><td class="col-name">Written TC $ Diff</td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-present type-retail"><span class="tbadge">$R</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="cell-missing"><span class="dash">—</span></td><td class="col-exp"><span class="ebadge type-retail">$R</span></td></tr>
+</tbody></table></div></div>
+</div>
+</div>
+
+<!-- REFRESH MODAL -->
+<div class="modal-overlay" id="refreshModal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <div class="modal-title">🔄 How to Refresh This Artifact</div>
+    <div class="modal-steps">
+      <div class="modal-step"><div class="modal-step-num">1</div><div>Open the <strong>source Google Sheet</strong> and ensure the KPI mapping is up to date.</div></div>
+      <div class="modal-step"><div class="modal-step-num">2</div><div>Download it as <strong>MFRM MASTER KPI MAPPING.xlsx</strong> and place it in the project folder.</div></div>
+      <div class="modal-step"><div class="modal-step-num">3</div><div>Run <code style="background:#f5f5f5;padding:2px 5px;border-radius:3px;font-size:12px">python3 rebuild.py</code> from the project directory to regenerate this HTML.</div></div>
+      <div class="modal-step"><div class="modal-step-num">4</div><div>Replace the existing <code style="background:#f5f5f5;padding:2px 5px;border-radius:3px;font-size:12px">KPI_Sanity_Check.html</code> with the newly generated file.</div></div>
+    </div>
+    <a class="modal-open-btn" href="https://docs.google.com/spreadsheets/d/1vVC6C5UR78pNttTeMtKKdnUpUa1GBYQmdN61vQH_Qk8/edit#gid=1703237684" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center;gap:6px">📊 Open Google Sheet</a>
+    <button class="modal-close" onclick="document.getElementById('refreshModal').classList.remove('open')">Close</button>
+  </div>
+</div>
+
+<script>
+var ALL_DATA=[{"base_key": "13wk_avg_sls_u", "metric_name": "13 WK Average Sales U", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_13WK_AVG_SLS_U", "formats": {"WP": "unit", "TY": "unit", "LY": "unit", "LLY": "unit", "BDGT": "unit", "FCST": "unit"}, "ui": {"WP": "N", "TY": "N", "LY": "N", "LLY": "N", "BDGT": "N", "FCST": "N"}, "absent": [], "present_count": 6, "expected_type": "unit", "actual_type": "unit", "type_ok": true, "fmt_consistent": true, "deviation": false}, {"base_key": "auc", "metric_name": "AUC", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_AUC", "formats": {"WP": "dollarsCostTwoDecimals", "TY": "dollarsCostTwoDecimals", "LY": "dollarsCostTwoDecimals", "LLY": "dollarsCostTwoDecimals", "BDGT": "dollarsCostTwoDecimals", "FCST": "dollarsCostTwoDecimals"}, "ui": {"WP": "Y", "TY": "N", "LY": "Y", "LLY": "Y", "BDGT": "Y", "FCST": "Y"}, "absent": [], "present_count": 6, "expected_type": null, "actual_type": "dollarsCostTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": false}, {"base_key": "avg_inv_c", "metric_name": "Average Inventory Cost $", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_AVG_INV_C", "formats": {"WP": "dollarsCostTwoDecimals", "TY": "dollarsCostTwoDecimals", "LY": "dollarsCostTwoDecimals", "LLY": "dollarsCostTwoDecimals", "BDGT": "dollarsCostTwoDecimals", "FCST": "dollarsCostTwoDecimals"}, "ui": {"WP": "N", "TY": "N", "LY": "N", "LLY": "N", "BDGT": "N", "FCST": "N"}, "absent": [], "present_count": 6, "expected_type": "dollarsCostTwoDecimals", "actual_type": "dollarsCostTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": false}, {"base_key": "avg_inv_u", "metric_name": "Average Inventory U", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_AVG_INV_U", "formats": {"WP": "unit", "TY": "unit", "LY": "unit", "LLY": "unit", "BDGT": "unit", "FCST": "unit"}, "ui": {"WP": "N", "TY": "N", "LY": "N", "LLY": "N", "BDGT": "N", "FCST": "N"}, "absent": [], "present_count": 6, "expected_type": "unit", "actual_type": "unit", "type_ok": true, "fmt_consistent": true, "deviation": false}, {"base_key": "bop_c", "metric_name": "BOP Cost $", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_BOP_C", "formats": {"WP": "dollarsCostTwoDecimals", "TY": "dollarsCostTwoDecimals", "LY": "dollarsCostTwoDecimals", "LLY": "dollarsCostTwoDecimals", "BDGT": "dollarsCostTwoDecimals", "FCST": "dollarsCostTwoDecimals"}, "ui": {"WP": "Y", "TY": "N", "LY": "Y", "LLY": "Y", "BDGT": "Y", "FCST": "Y"}, "absent": [], "present_count": 6, "expected_type": "dollarsCostTwoDecimals", "actual_type": "dollarsCostTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": false}, {"base_key": "bop_u", "metric_name": "BOP U", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_BOP_U", "formats": {"WP": "unit", "TY": "unit", "LY": "unit", "LLY": "unit", "BDGT": "unit", "FCST": "unit"}, "ui": {"WP": "Y", "TY": "N", "LY": "Y", "LLY": "Y", "BDGT": "Y", "FCST": "Y"}, "absent": [], "present_count": 6, "expected_type": "unit", "actual_type": "unit", "type_ok": true, "fmt_consistent": true, "deviation": false}, {"base_key": "bos_rdy_b", "metric_name": "BOS Readiness Flag", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_BOS_RDY_B", "formats": {"WP": "boolean", "TY": null, "LY": null, "LLY": null, "BDGT": null, "FCST": null}, "ui": {"WP": "Y", "TY": null, "LY": null, "LLY": null, "BDGT": null, "FCST": null}, "absent": ["TY", "LY", "LLY", "BDGT", "FCST"], "present_count": 1, "expected_type": "boolean", "actual_type": "boolean", "type_ok": true, "fmt_consistent": true, "deviation": true}, {"base_key": "cmpy_upld_fnl_fnc_tgt_sls_r", "metric_name": "Uploaded Finalized Finance Target Sales $", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_CMPY_UPLD_FNL_FNC_TGT_SLS_R", "formats": {"WP": "dollarsRetailTwoDecimals", "TY": null, "LY": null, "LLY": null, "BDGT": null, "FCST": null}, "ui": {"WP": "Y", "TY": null, "LY": null, "LLY": null, "BDGT": null, "FCST": null}, "absent": ["TY", "LY", "LLY", "BDGT", "FCST"], "present_count": 1, "expected_type": "dollarsRetailTwoDecimals", "actual_type": "dollarsRetailTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": true}, {"base_key": "cmpy_upld_wrn_fnc_tgt_sls_r", "metric_name": "Uploaded Written Finance Target Sales $", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_CMPY_UPLD_WRN_FNC_TGT_SLS_R", "formats": {"WP": "dollarsRetailTwoDecimals", "TY": null, "LY": null, "LLY": null, "BDGT": null, "FCST": null}, "ui": {"WP": "Y", "TY": null, "LY": null, "LLY": null, "BDGT": null, "FCST": null}, "absent": ["TY", "LY", "LLY", "BDGT", "FCST"], "present_count": 1, "expected_type": "dollarsRetailTwoDecimals", "actual_type": "dollarsRetailTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": true}, {"base_key": "eop_c", "metric_name": "EOP Cost $", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_EOP_C", "formats": {"WP": "dollarsCostTwoDecimals", "TY": "dollarsCostTwoDecimals", "LY": "dollarsCostTwoDecimals", "LLY": "dollarsCostTwoDecimals", "BDGT": "dollarsCostTwoDecimals", "FCST": "dollarsCostTwoDecimals"}, "ui": {"WP": "Y", "TY": "N", "LY": "Y", "LLY": "Y", "BDGT": "Y", "FCST": "Y"}, "absent": [], "present_count": 6, "expected_type": "dollarsCostTwoDecimals", "actual_type": "dollarsCostTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": false}, {"base_key": "eop_u", "metric_name": "EOP U", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_EOP_U", "formats": {"WP": "unit", "TY": "unit", "LY": "unit", "LLY": "unit", "BDGT": "unit", "FCST": "unit"}, "ui": {"WP": "Y", "TY": "N", "LY": "Y", "LLY": "Y", "BDGT": "Y", "FCST": "Y"}, "absent": [], "present_count": 6, "expected_type": "unit", "actual_type": "unit", "type_ok": true, "fmt_consistent": true, "deviation": false}, {"base_key": "fnl_attch_p", "metric_name": "Finalized Attach Rate", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_FNL_ATTCH_P", "formats": {"WP": "percentageTwoDecimals", "TY": "percentageTwoDecimals", "LY": "percentageTwoDecimals", "LLY": "percentageTwoDecimals", "BDGT": "percentageTwoDecimals", "FCST": "percentageTwoDecimals"}, "ui": {"WP": "Y", "TY": "N", "LY": "Y", "LLY": "Y", "BDGT": "Y", "FCST": "Y"}, "absent": [], "present_count": 6, "expected_type": "percentageTwoDecimals", "actual_type": "percentageTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": false}, {"base_key": "fnl_ausp", "metric_name": "Finalized AUSP", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": null, "formats": {"WP": "dollarsRetailTwoDecimals", "TY": "dollarsRetailTwoDecimals", "LY": "dollarsRetailTwoDecimals", "LLY": "dollarsRetailTwoDecimals", "BDGT": "dollarsRetailTwoDecimals", "FCST": "dollarsRetailTwoDecimals"}, "ui": {"WP": "Y", "TY": "N", "LY": "Y", "LLY": "Y", "BDGT": "Y", "FCST": "Y"}, "absent": [], "present_count": 6, "expected_type": null, "actual_type": "dollarsRetailTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": false}, {"base_key": "fnl_awros_r", "metric_name": "Finalized AWROS", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_FNL_AWROS_I", "formats": {"WP": "dollarsRetailTwoDecimals", "TY": null, "LY": "dollarsRetailTwoDecimals", "LLY": "dollarsRetailTwoDecimals", "BDGT": "dollarsRetailTwoDecimals", "FCST": "dollarsRetailTwoDecimals"}, "ui": {"WP": "Y", "TY": null, "LY": "Y", "LLY": "Y", "BDGT": "Y", "FCST": "Y"}, "absent": ["TY"], "present_count": 5, "expected_type": "dollarsRetailTwoDecimals", "actual_type": "dollarsRetailTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": true}, {"base_key": "fnl_bos_p", "metric_name": "Finalized BOS %", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_FNL_BOS_P", "formats": {"WP": "percentageTwoDecimals", "TY": "percentageTwoDecimals", "LY": "percentageTwoDecimals", "LLY": "percentageTwoDecimals", "BDGT": "percentageTwoDecimals", "FCST": "percentageTwoDecimals"}, "ui": {"WP": "Y", "TY": "N", "LY": "Y", "LLY": "Y", "BDGT": "Y", "FCST": "Y"}, "absent": [], "present_count": 6, "expected_type": "percentageTwoDecimals", "actual_type": "percentageTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": false}, {"base_key": "fnl_cm_p", "metric_name": "Finalized Core Margin %", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_FNL_CM_P", "formats": {"WP": "percentageTwoDecimals", "TY": "percentageTwoDecimals", "LY": "percentageTwoDecimals", "LLY": "percentageTwoDecimals", "BDGT": "percentageTwoDecimals", "FCST": "percentageTwoDecimals"}, "ui": {"WP": "Y", "TY": "N", "LY": "Y", "LLY": "Y", "BDGT": "Y", "FCST": "Y"}, "absent": [], "present_count": 6, "expected_type": "percentageTwoDecimals", "actual_type": "percentageTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": false}, {"base_key": "fnl_cm_r", "metric_name": "Finalized Core Margin $", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_FNL_CM_R", "formats": {"WP": "dollarsRetailTwoDecimals", "TY": "dollarsRetailTwoDecimals", "LY": "dollarsRetailTwoDecimals", "LLY": "dollarsRetailTwoDecimals", "BDGT": "dollarsRetailTwoDecimals", "FCST": "dollarsRetailTwoDecimals"}, "ui": {"WP": "Y", "TY": "N", "LY": "Y", "LLY": "Y", "BDGT": "Y", "FCST": "Y"}, "absent": [], "present_count": 6, "expected_type": "dollarsRetailTwoDecimals", "actual_type": "dollarsRetailTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": false}, {"base_key": "fnl_cmp_sls_p", "metric_name": "Finalized Comp Sales %", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_FNL_CMP_SLS_P", "formats": {"WP": "percentageTwoDecimals", "TY": null, "LY": null, "LLY": null, "BDGT": "percentageTwoDecimals", "FCST": "percentageTwoDecimals"}, "ui": {"WP": "Y", "TY": null, "LY": null, "LLY": null, "BDGT": "Y", "FCST": "Y"}, "absent": ["TY", "LY", "LLY"], "present_count": 3, "expected_type": "percentageTwoDecimals", "actual_type": "percentageTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": true}, {"base_key": "fnl_cmp_sls_r", "metric_name": "Finalized Comp Sales Retail $", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_FNL_CMP_SLS_R", "formats": {"WP": "dollarsRetailTwoDecimals", "TY": null, "LY": null, "LLY": null, "BDGT": "dollarsRetailTwoDecimals", "FCST": "dollarsRetailTwoDecimals"}, "ui": {"WP": "Y", "TY": null, "LY": null, "LLY": null, "BDGT": "Y", "FCST": "Y"}, "absent": ["TY", "LY", "LLY"], "present_count": 3, "expected_type": "dollarsRetailTwoDecimals", "actual_type": "dollarsRetailTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": true}, {"base_key": "fnl_cogs_c", "metric_name": "Finalized COGS $", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_FNL_COGS_R", "formats": {"WP": "dollarsCostTwoDecimals", "TY": "dollarsCostTwoDecimals", "LY": "dollarsCostTwoDecimals", "LLY": "dollarsCostTwoDecimals", "BDGT": "dollarsCostTwoDecimals", "FCST": "dollarsCostTwoDecimals"}, "ui": {"WP": "Y", "TY": "N", "LY": "Y", "LLY": "Y", "BDGT": "Y", "FCST": "Y"}, "absent": [], "present_count": 6, "expected_type": "dollarsCostTwoDecimals", "actual_type": "dollarsCostTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": false}, {"base_key": "fnl_retrn_sls_r", "metric_name": "Finalized Return Sales Retail $", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_FNL_RETRN_SLS_R", "formats": {"WP": "dollarsRetailTwoDecimals", "TY": "dollarsRetailTwoDecimals", "LY": "dollarsRetailTwoDecimals", "LLY": "dollarsRetailTwoDecimals", "BDGT": "dollarsRetailTwoDecimals", "FCST": "dollarsRetailTwoDecimals"}, "ui": {"WP": "Y", "TY": "N", "LY": "Y", "LLY": "Y", "BDGT": "Y", "FCST": "Y"}, "absent": [], "present_count": 6, "expected_type": "dollarsRetailTwoDecimals", "actual_type": "dollarsRetailTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": false}, {"base_key": "fnl_retrn_sls_r_p", "metric_name": "Finalized Return Sales Retail %", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_FNL_RETRN_SLS_R_P", "formats": {"WP": "percentageTwoDecimals", "TY": "percentageTwoDecimals", "LY": "percentageTwoDecimals", "LLY": "percentageTwoDecimals", "BDGT": "percentageTwoDecimals", "FCST": "percentageTwoDecimals"}, "ui": {"WP": "Y", "TY": "N", "LY": "Y", "LLY": "Y", "BDGT": "Y", "FCST": "Y"}, "absent": [], "present_count": 6, "expected_type": "percentageTwoDecimals", "actual_type": "percentageTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": false}, {"base_key": "fnl_retrn_sls_u", "metric_name": "Finalized Return Sales U", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_FNL_RETRN_SLS_U", "formats": {"WP": "unit", "TY": "unit", "LY": "unit", "LLY": "unit", "BDGT": "unit", "FCST": "unit"}, "ui": {"WP": "Y", "TY": "N", "LY": "Y", "LLY": "Y", "BDGT": "Y", "FCST": "Y"}, "absent": [], "present_count": 6, "expected_type": "unit", "actual_type": "unit", "type_ok": true, "fmt_consistent": true, "deviation": false}, {"base_key": "fnl_retrn_sls_u_p", "metric_name": "Finalized Return Sales U %", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_FNL_RETRN_SLS_U_P", "formats": {"WP": "percentageTwoDecimals", "TY": "percentageTwoDecimals", "LY": "percentageTwoDecimals", "LLY": "percentageTwoDecimals", "BDGT": "percentageTwoDecimals", "FCST": "percentageTwoDecimals"}, "ui": {"WP": "Y", "TY": "N", "LY": "Y", "LLY": "Y", "BDGT": "Y", "FCST": "Y"}, "absent": [], "present_count": 6, "expected_type": "percentageTwoDecimals", "actual_type": "percentageTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": false}, {"base_key": "fnl_sls_r", "metric_name": "Finalized Sales Retail $", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_FNL_SLS_R", "formats": {"WP": "dollarsRetailTwoDecimals", "TY": "dollarsRetailTwoDecimals", "LY": "dollarsRetailTwoDecimals", "LLY": "dollarsRetailTwoDecimals", "BDGT": "dollarsRetailTwoDecimals", "FCST": "dollarsRetailTwoDecimals"}, "ui": {"WP": "Y", "TY": "N", "LY": "Y", "LLY": "Y", "BDGT": "Y", "FCST": "Y"}, "absent": [], "present_count": 6, "expected_type": "dollarsRetailTwoDecimals", "actual_type": "dollarsRetailTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": false}, {"base_key": "fnl_sls_r_diff", "metric_name": "Finalized Sales Retail $ Diff", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_FNL_SLS_R_DIFF", "formats": {"WP": "dollarsRetailTwoDecimals", "TY": null, "LY": null, "LLY": null, "BDGT": "dollarsRetailTwoDecimals", "FCST": "dollarsRetailTwoDecimals"}, "ui": {"WP": "Y", "TY": null, "LY": null, "LLY": null, "BDGT": "Y", "FCST": "Y"}, "absent": ["TY", "LY", "LLY"], "present_count": 3, "expected_type": null, "actual_type": "dollarsRetailTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": true}, {"base_key": "fnl_sls_r_diff_r", "metric_name": "Finalized Sales Retail $ Diff", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": null, "formats": {"WP": null, "TY": "dollarsRetailTwoDecimals", "LY": null, "LLY": null, "BDGT": null, "FCST": null}, "ui": {"WP": null, "TY": "N", "LY": null, "LLY": null, "BDGT": null, "FCST": null}, "absent": ["WP", "LY", "LLY", "BDGT", "FCST"], "present_count": 1, "expected_type": "dollarsRetailTwoDecimals", "actual_type": "dollarsRetailTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": true}, {"base_key": "fnl_sls_r_var_p", "metric_name": "Finalized Sales Retail % Var", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_FNL_SLS_R_VAR", "formats": {"WP": "percentageTwoDecimals", "TY": "percentageTwoDecimals", "LY": null, "LLY": null, "BDGT": "percentageTwoDecimals", "FCST": "percentageTwoDecimals"}, "ui": {"WP": "Y", "TY": "N", "LY": null, "LLY": null, "BDGT": "Y", "FCST": "Y"}, "absent": ["LY", "LLY"], "present_count": 4, "expected_type": "percentageTwoDecimals", "actual_type": "percentageTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": true}, {"base_key": "fnl_sls_u", "metric_name": "Finalized Sales Units", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": null, "formats": {"WP": "unit", "TY": "unit", "LY": "unit", "LLY": "unit", "BDGT": "unit", "FCST": "unit"}, "ui": {"WP": "Y", "TY": "N", "LY": "Y", "LLY": "Y", "BDGT": "Y", "FCST": "Y"}, "absent": [], "present_count": 6, "expected_type": "unit", "actual_type": "unit", "type_ok": true, "fmt_consistent": true, "deviation": false}, {"base_key": "fnl_sls_u_diff_u", "metric_name": "Finalized Sales U Diff", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_FNL_SLS_U_DIFF", "formats": {"WP": "unit", "TY": "unit", "LY": null, "LLY": null, "BDGT": "unit", "FCST": "unit"}, "ui": {"WP": "Y", "TY": "N", "LY": null, "LLY": null, "BDGT": "Y", "FCST": "Y"}, "absent": ["LY", "LLY"], "present_count": 4, "expected_type": "unit", "actual_type": "unit", "type_ok": true, "fmt_consistent": true, "deviation": true}, {"base_key": "fnl_sls_u_var_p", "metric_name": "Finalized Sales U % Var", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_FNL_SLS_U_VAR", "formats": {"WP": "percentageTwoDecimals", "TY": "percentageTwoDecimals", "LY": null, "LLY": null, "BDGT": "percentageTwoDecimals", "FCST": "percentageTwoDecimals"}, "ui": {"WP": "Y", "TY": "N", "LY": null, "LLY": null, "BDGT": "Y", "FCST": "Y"}, "absent": ["LY", "LLY"], "present_count": 4, "expected_type": "percentageTwoDecimals", "actual_type": "percentageTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": true}, {"base_key": "fnl_tc_p", "metric_name": "Finalized TC %", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_FNL_TC_P", "formats": {"WP": "percentageTwoDecimals", "TY": "percentageTwoDecimals", "LY": "percentageTwoDecimals", "LLY": "percentageTwoDecimals", "BDGT": "percentageTwoDecimals", "FCST": "percentageTwoDecimals"}, "ui": {"WP": "Y", "TY": "N", "LY": "Y", "LLY": "Y", "BDGT": "Y", "FCST": "Y"}, "absent": [], "present_count": 6, "expected_type": "percentageTwoDecimals", "actual_type": "percentageTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": false}, {"base_key": "fnl_tc_r", "metric_name": "Finalized TC $", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_FNL_TC_R", "formats": {"WP": "dollarsRetailTwoDecimals", "TY": "dollarsRetailTwoDecimals", "LY": "dollarsRetailTwoDecimals", "LLY": "dollarsRetailTwoDecimals", "BDGT": "dollarsRetailTwoDecimals", "FCST": "dollarsRetailTwoDecimals"}, "ui": {"WP": "Y", "TY": "N", "LY": "Y", "LLY": "Y", "BDGT": "Y", "FCST": "Y"}, "absent": [], "present_count": 6, "expected_type": "dollarsRetailTwoDecimals", "actual_type": "dollarsRetailTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": false}, {"base_key": "fnl_tc_r_diff_p", "metric_name": "Shifted Holiday Finalized TC %", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_FNL_TC_R_DIFF", "formats": {"WP": "percentageTwoDecimals", "TY": null, "LY": null, "LLY": null, "BDGT": "percentageTwoDecimals", "FCST": "percentageTwoDecimals"}, "ui": {"WP": "Y", "TY": null, "LY": null, "LLY": null, "BDGT": "Y", "FCST": "Y"}, "absent": ["TY", "LY", "LLY"], "present_count": 3, "expected_type": "percentageTwoDecimals", "actual_type": "percentageTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": true}, {"base_key": "fnl_tc_r_diff_r", "metric_name": "Finalized TC $ Diff", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": null, "formats": {"WP": null, "TY": "dollarsRetailTwoDecimals", "LY": null, "LLY": null, "BDGT": null, "FCST": null}, "ui": {"WP": null, "TY": "N", "LY": null, "LLY": null, "BDGT": null, "FCST": null}, "absent": ["WP", "LY", "LLY", "BDGT", "FCST"], "present_count": 1, "expected_type": "dollarsRetailTwoDecimals", "actual_type": "dollarsRetailTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": true}, {"base_key": "fnl_tc_r_var", "metric_name": "Finalized TC $ Var", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_FNL_TC_R_VAR", "formats": {"WP": "dollarsRetailTwoDecimals", "TY": null, "LY": null, "LLY": null, "BDGT": "dollarsRetailTwoDecimals", "FCST": "dollarsRetailTwoDecimals"}, "ui": {"WP": "Y", "TY": null, "LY": null, "LLY": null, "BDGT": "Y", "FCST": "Y"}, "absent": ["TY", "LY", "LLY"], "present_count": 3, "expected_type": null, "actual_type": "dollarsRetailTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": true}, {"base_key": "fnl_tc_roi_i", "metric_name": "Finalized TC ROI", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_FNL_TC_ROI", "formats": {"WP": "index", "TY": "index", "LY": "index", "LLY": "index", "BDGT": "index", "FCST": "index"}, "ui": {"WP": "Y", "TY": "N", "LY": "Y", "LLY": "Y", "BDGT": "Y", "FCST": "Y"}, "absent": [], "present_count": 6, "expected_type": "index", "actual_type": "index", "type_ok": true, "fmt_consistent": true, "deviation": false}, {"base_key": "fnl_vi_p", "metric_name": "Finalized VI %", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_FNL_VI_P", "formats": {"WP": "percentageTwoDecimals", "TY": "percentageTwoDecimals", "LY": "percentageTwoDecimals", "LLY": "percentageTwoDecimals", "BDGT": "percentageTwoDecimals", "FCST": "percentageTwoDecimals"}, "ui": {"WP": "Y", "TY": "N", "LY": "Y", "LLY": "Y", "BDGT": "Y", "FCST": "Y"}, "absent": [], "present_count": 6, "expected_type": "percentageTwoDecimals", "actual_type": "percentageTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": false}, {"base_key": "fnl_vi_r", "metric_name": "Finalized VI $", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_FNL_VI_R", "formats": {"WP": "dollarsRetailTwoDecimals", "TY": "dollarsRetailTwoDecimals", "LY": "dollarsRetailTwoDecimals", "LLY": "dollarsRetailTwoDecimals", "BDGT": "dollarsRetailTwoDecimals", "FCST": "dollarsRetailTwoDecimals"}, "ui": {"WP": "Y", "TY": "N", "LY": "Y", "LLY": "Y", "BDGT": "Y", "FCST": "Y"}, "absent": [], "present_count": 6, "expected_type": "dollarsRetailTwoDecimals", "actual_type": "dollarsRetailTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": false}, {"base_key": "fwos_i", "metric_name": "FWOS", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_FWOS", "formats": {"WP": "index", "TY": "index", "LY": "index", "LLY": "index", "BDGT": "index", "FCST": "index"}, "ui": {"WP": "Y", "TY": "N", "LY": "Y", "LLY": "Y", "BDGT": "Y", "FCST": "Y"}, "absent": [], "present_count": 6, "expected_type": "index", "actual_type": "index", "type_ok": true, "fmt_consistent": true, "deviation": false}, {"base_key": "oo_c", "metric_name": "On Order Cost $", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_OO_C", "formats": {"WP": "dollarsCostTwoDecimals", "TY": "dollarsCostTwoDecimals", "LY": null, "LLY": null, "BDGT": "dollarsCostTwoDecimals", "FCST": "dollarsCostTwoDecimals"}, "ui": {"WP": "Y", "TY": "N", "LY": null, "LLY": null, "BDGT": "Y", "FCST": "Y"}, "absent": ["LY", "LLY"], "present_count": 4, "expected_type": "dollarsCostTwoDecimals", "actual_type": "dollarsCostTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": true}, {"base_key": "oo_u", "metric_name": "On Order U", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_OO_U", "formats": {"WP": "unit", "TY": "unit", "LY": null, "LLY": null, "BDGT": "unit", "FCST": "unit"}, "ui": {"WP": "Y", "TY": "N", "LY": null, "LLY": null, "BDGT": "Y", "FCST": "Y"}, "absent": ["LY", "LLY"], "present_count": 4, "expected_type": "unit", "actual_type": "unit", "type_ok": true, "fmt_consistent": true, "deviation": true}, {"base_key": "otb_adj_u", "metric_name": "OTB Adjustment U", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_OTB_ADJ_U", "formats": {"WP": "unit", "TY": null, "LY": null, "LLY": null, "BDGT": "unit", "FCST": "unit"}, "ui": {"WP": "Y", "TY": null, "LY": null, "LLY": null, "BDGT": "Y", "FCST": "Y"}, "absent": ["TY", "LY", "LLY"], "present_count": 3, "expected_type": "unit", "actual_type": "unit", "type_ok": true, "fmt_consistent": true, "deviation": true}, {"base_key": "otb_c", "metric_name": "OTB Cost $", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_OTB_C", "formats": {"WP": "dollarsCostTwoDecimals", "TY": null, "LY": null, "LLY": null, "BDGT": "dollarsCostTwoDecimals", "FCST": "dollarsCostTwoDecimals"}, "ui": {"WP": "Y", "TY": null, "LY": null, "LLY": null, "BDGT": "Y", "FCST": "Y"}, "absent": ["TY", "LY", "LLY"], "present_count": 3, "expected_type": "dollarsCostTwoDecimals", "actual_type": "dollarsCostTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": true}, {"base_key": "otb_u", "metric_name": "OTB U", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_OTB_U", "formats": {"WP": "unit", "TY": null, "LY": null, "LLY": null, "BDGT": "unit", "FCST": "unit"}, "ui": {"WP": "Y", "TY": null, "LY": null, "LLY": null, "BDGT": "Y", "FCST": "Y"}, "absent": ["TY", "LY", "LLY"], "present_count": 3, "expected_type": "unit", "actual_type": "unit", "type_ok": true, "fmt_consistent": true, "deviation": true}, {"base_key": "ots_c", "metric_name": "OTS Cost $", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_OTS_C", "formats": {"WP": "dollarsCostTwoDecimals", "TY": null, "LY": null, "LLY": null, "BDGT": "dollarsCostTwoDecimals", "FCST": "dollarsCostTwoDecimals"}, "ui": {"WP": "Y", "TY": null, "LY": null, "LLY": null, "BDGT": "Y", "FCST": "Y"}, "absent": ["TY", "LY", "LLY"], "present_count": 3, "expected_type": "dollarsCostTwoDecimals", "actual_type": "dollarsCostTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": true}, {"base_key": "ots_u", "metric_name": "OTS U", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_OTS_U", "formats": {"WP": "unit", "TY": null, "LY": null, "LLY": null, "BDGT": "unit", "FCST": "unit"}, "ui": {"WP": "Y", "TY": null, "LY": null, "LLY": null, "BDGT": "Y", "FCST": "Y"}, "absent": ["TY", "LY", "LLY"], "present_count": 3, "expected_type": "unit", "actual_type": "unit", "type_ok": true, "fmt_consistent": true, "deviation": true}, {"base_key": "pl_prev_upld_fnl_fnc_tgt_sls_r", "metric_name": "Previous Uploaded Finalized PL Finance Target Sales $", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_PL_PREV_UPLD_FNL_FNC_TGT_SLS_R", "formats": {"WP": "dollarsRetailTwoDecimals", "TY": null, "LY": null, "LLY": null, "BDGT": null, "FCST": null}, "ui": {"WP": "Y", "TY": null, "LY": null, "LLY": null, "BDGT": null, "FCST": null}, "absent": ["TY", "LY", "LLY", "BDGT", "FCST"], "present_count": 1, "expected_type": "dollarsRetailTwoDecimals", "actual_type": "dollarsRetailTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": true}, {"base_key": "pl_prev_upld_wrn_fnc_tgt_sls_r", "metric_name": "Previous Uploaded Written PL Finance Target Sales $", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_PL_PREV_UPLD_WRN_FNC_TGT_SLS_R", "formats": {"WP": "dollarsRetailTwoDecimals", "TY": null, "LY": null, "LLY": null, "BDGT": null, "FCST": null}, "ui": {"WP": "Y", "TY": null, "LY": null, "LLY": null, "BDGT": null, "FCST": null}, "absent": ["TY", "LY", "LLY", "BDGT", "FCST"], "present_count": 1, "expected_type": "dollarsRetailTwoDecimals", "actual_type": "dollarsRetailTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": true}, {"base_key": "pl_upld_fnl_fnc_tgt_sls_r", "metric_name": "Uploaded Finalized PL Finance Target Sales $", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_PL_UPLD_FNL_FNC_TGT_SLS_R", "formats": {"WP": "dollarsRetailTwoDecimals", "TY": null, "LY": null, "LLY": null, "BDGT": null, "FCST": null}, "ui": {"WP": "Y", "TY": null, "LY": null, "LLY": null, "BDGT": null, "FCST": null}, "absent": ["TY", "LY", "LLY", "BDGT", "FCST"], "present_count": 1, "expected_type": "dollarsRetailTwoDecimals", "actual_type": "dollarsRetailTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": true}, {"base_key": "pl_upld_wrn_fnc_tgt_sls_r", "metric_name": "Uploaded Written PL Finance Target Sales $", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_PL_UPLD_WRN_FNC_TGT_SLS_R", "formats": {"WP": "dollarsRetailTwoDecimals", "TY": null, "LY": null, "LLY": null, "BDGT": null, "FCST": null}, "ui": {"WP": "Y", "TY": null, "LY": null, "LLY": null, "BDGT": null, "FCST": null}, "absent": ["TY", "LY", "LLY", "BDGT", "FCST"], "present_count": 1, "expected_type": "dollarsRetailTwoDecimals", "actual_type": "dollarsRetailTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": true}, {"base_key": "rcpt_c", "metric_name": "Receipts Cost $", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_RCPT_C", "formats": {"WP": "dollarsCostTwoDecimals", "TY": "dollarsCostTwoDecimals", "LY": "dollarsCostTwoDecimals", "LLY": "dollarsCostTwoDecimals", "BDGT": "dollarsCostTwoDecimals", "FCST": "dollarsCostTwoDecimals"}, "ui": {"WP": "Y", "TY": "N", "LY": "Y", "LLY": "Y", "BDGT": "Y", "FCST": "Y"}, "absent": [], "present_count": 6, "expected_type": "dollarsCostTwoDecimals", "actual_type": "dollarsCostTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": false}, {"base_key": "rcpt_u", "metric_name": "Receipts U", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_RCPT_U", "formats": {"WP": "unit", "TY": "unit", "LY": "unit", "LLY": "unit", "BDGT": "unit", "FCST": "unit"}, "ui": {"WP": "Y", "TY": "N", "LY": "Y", "LLY": "Y", "BDGT": "Y", "FCST": "Y"}, "absent": [], "present_count": 6, "expected_type": "unit", "actual_type": "unit", "type_ok": true, "fmt_consistent": true, "deviation": false}, {"base_key": "s2s_i", "metric_name": "S2S Ratio", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": null, "formats": {"WP": "index", "TY": "index", "LY": "index", "LLY": "index", "BDGT": "index", "FCST": "index"}, "ui": {"WP": "Y", "TY": "N", "LY": "Y", "LLY": "Y", "BDGT": "Y", "FCST": "Y"}, "absent": [], "present_count": 6, "expected_type": "index", "actual_type": "index", "type_ok": true, "fmt_consistent": true, "deviation": false}, {"base_key": "shft_fnl_ausp", "metric_name": "Shifted Finalized AUSP", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_SHFT_FNL_AUSP", "formats": {"WP": "dollarsRetailTwoDecimals", "TY": "dollarsRetailTwoDecimals", "LY": null, "LLY": null, "BDGT": "dollarsRetailTwoDecimals", "FCST": "dollarsRetailTwoDecimals"}, "ui": {"WP": "Y", "TY": "N", "LY": null, "LLY": null, "BDGT": "Y", "FCST": "Y"}, "absent": ["LY", "LLY"], "present_count": 4, "expected_type": null, "actual_type": "dollarsRetailTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": true}, {"base_key": "shft_fnl_hdy_sls_r", "metric_name": "Shifted Finalized Holiday Sales Retail $", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_SHFT_FNL_HDY_SLS_R", "formats": {"WP": "dollarsRetailTwoDecimals", "TY": "dollarsRetailTwoDecimals", "LY": null, "LLY": null, "BDGT": "dollarsRetailTwoDecimals", "FCST": "dollarsRetailTwoDecimals"}, "ui": {"WP": "Y", "TY": "N", "LY": null, "LLY": null, "BDGT": "Y", "FCST": "Y"}, "absent": ["LY", "LLY"], "present_count": 4, "expected_type": "dollarsRetailTwoDecimals", "actual_type": "dollarsRetailTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": true}, {"base_key": "shft_fnl_hdy_sls_r_var_p", "metric_name": "Shifted Finalized Holiday Sales Retail % Var", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_SHFT_FNL_HDY_SLS_R_VAR", "formats": {"WP": "percentageTwoDecimals", "TY": "percentageTwoDecimals", "LY": null, "LLY": null, "BDGT": "percentageTwoDecimals", "FCST": "percentageTwoDecimals"}, "ui": {"WP": "Y", "TY": "N", "LY": null, "LLY": null, "BDGT": "Y", "FCST": "Y"}, "absent": ["LY", "LLY"], "present_count": 4, "expected_type": "percentageTwoDecimals", "actual_type": "percentageTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": true}, {"base_key": "shft_wrn_ausp", "metric_name": "Shifted Written AUSP", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_SHFT_WRN_AUSP", "formats": {"WP": "dollarsRetailTwoDecimals", "TY": "dollarsRetailTwoDecimals", "LY": null, "LLY": null, "BDGT": "dollarsRetailTwoDecimals", "FCST": "dollarsRetailTwoDecimals"}, "ui": {"WP": "Y", "TY": "N", "LY": null, "LLY": null, "BDGT": "Y", "FCST": "Y"}, "absent": ["LY", "LLY"], "present_count": 4, "expected_type": null, "actual_type": "dollarsRetailTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": true}, {"base_key": "shft_wrn_hdy_sls_r", "metric_name": "Shifted Written Holiday Sales Retail $", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_SHFT_WRN_HDY_SLS_R", "formats": {"WP": "dollarsRetailTwoDecimals", "TY": "dollarsRetailTwoDecimals", "LY": null, "LLY": null, "BDGT": "dollarsRetailTwoDecimals", "FCST": "dollarsRetailTwoDecimals"}, "ui": {"WP": "Y", "TY": "N", "LY": null, "LLY": null, "BDGT": "Y", "FCST": "Y"}, "absent": ["LY", "LLY"], "present_count": 4, "expected_type": "dollarsRetailTwoDecimals", "actual_type": "dollarsRetailTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": true}, {"base_key": "shft_wrn_hdy_sls_r_var_p", "metric_name": "Shifted Written Holiday Sales Retail % Var", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_SHFT_WRN_HDY_SLS_R_VAR", "formats": {"WP": "percentageTwoDecimals", "TY": "percentageTwoDecimals", "LY": null, "LLY": null, "BDGT": "percentageTwoDecimals", "FCST": "percentageTwoDecimals"}, "ui": {"WP": "Y", "TY": "N", "LY": null, "LLY": null, "BDGT": "Y", "FCST": "Y"}, "absent": ["LY", "LLY"], "present_count": 4, "expected_type": "percentageTwoDecimals", "actual_type": "percentageTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": true}, {"base_key": "shrnk_c", "metric_name": "Shrink Cost $", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_SHRNK_C", "formats": {"WP": "dollarsCostTwoDecimals", "TY": "dollarsCostTwoDecimals", "LY": "dollarsCostTwoDecimals", "LLY": "dollarsCostTwoDecimals", "BDGT": "dollarsCostTwoDecimals", "FCST": "dollarsCostTwoDecimals"}, "ui": {"WP": "Y", "TY": "N", "LY": "Y", "LLY": "Y", "BDGT": "Y", "FCST": "Y"}, "absent": [], "present_count": 6, "expected_type": "dollarsCostTwoDecimals", "actual_type": "dollarsCostTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": false}, {"base_key": "shrnk_u", "metric_name": "Shrink U", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_SHRNK_U", "formats": {"WP": "unit", "TY": "unit", "LY": "unit", "LLY": "unit", "BDGT": "unit", "FCST": "unit"}, "ui": {"WP": "Y", "TY": "N", "LY": "Y", "LLY": "Y", "BDGT": "Y", "FCST": "Y"}, "absent": [], "present_count": 6, "expected_type": "unit", "actual_type": "unit", "type_ok": true, "fmt_consistent": true, "deviation": false}, {"base_key": "stk2sls_c_i", "metric_name": "Stock to Sales (Cost)", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_STK2SLS_C_I", "formats": {"WP": "index", "TY": null, "LY": "index", "LLY": "index", "BDGT": "index", "FCST": "index"}, "ui": {"WP": "Y", "TY": null, "LY": "Y", "LLY": "Y", "BDGT": "Y", "FCST": "Y"}, "absent": ["TY"], "present_count": 5, "expected_type": "index", "actual_type": "index", "type_ok": true, "fmt_consistent": true, "deviation": true}, {"base_key": "stk2sls_u_i", "metric_name": "Stock to Sales (Units)", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_STK2SLS_U_I", "formats": {"WP": "index", "TY": null, "LY": "index", "LLY": "index", "BDGT": "index", "FCST": "index"}, "ui": {"WP": "Y", "TY": null, "LY": "Y", "LLY": "Y", "BDGT": "Y", "FCST": "Y"}, "absent": ["TY"], "present_count": 5, "expected_type": "index", "actual_type": "index", "type_ok": true, "fmt_consistent": true, "deviation": true}, {"base_key": "str_cmp_flg_b", "metric_name": "Store Comp Flag", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_STR_CMP_FLG_B", "formats": {"WP": "boolean", "TY": null, "LY": null, "LLY": null, "BDGT": "boolean", "FCST": "boolean"}, "ui": {"WP": "Y", "TY": null, "LY": null, "LLY": null, "BDGT": "Y", "FCST": "Y"}, "absent": ["TY", "LY", "LLY"], "present_count": 3, "expected_type": "boolean", "actual_type": "boolean", "type_ok": true, "fmt_consistent": true, "deviation": true}, {"base_key": "tgt_eop_c", "metric_name": "Target EOP Cost $", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_TGT_EOP_C", "formats": {"WP": "dollarsCostTwoDecimals", "TY": null, "LY": null, "LLY": null, "BDGT": "dollarsCostTwoDecimals", "FCST": "dollarsCostTwoDecimals"}, "ui": {"WP": "Y", "TY": null, "LY": null, "LLY": null, "BDGT": "Y", "FCST": "Y"}, "absent": ["TY", "LY", "LLY"], "present_count": 3, "expected_type": "dollarsCostTwoDecimals", "actual_type": "dollarsCostTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": true}, {"base_key": "tgt_eop_u", "metric_name": "Target EOP U", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_TGT_EOP_U", "formats": {"WP": "unit", "TY": null, "LY": null, "LLY": null, "BDGT": "unit", "FCST": "unit"}, "ui": {"WP": "Y", "TY": null, "LY": null, "LLY": null, "BDGT": "Y", "FCST": "Y"}, "absent": ["TY", "LY", "LLY"], "present_count": 3, "expected_type": "unit", "actual_type": "unit", "type_ok": true, "fmt_consistent": true, "deviation": true}, {"base_key": "tgt_fwos_i", "metric_name": "Target FWOS", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_TGT_FWOS_I", "formats": {"WP": "index", "TY": null, "LY": null, "LLY": null, "BDGT": "index", "FCST": "index"}, "ui": {"WP": "Y", "TY": null, "LY": null, "LLY": null, "BDGT": "Y", "FCST": "Y"}, "absent": ["TY", "LY", "LLY"], "present_count": 3, "expected_type": "index", "actual_type": "index", "type_ok": true, "fmt_consistent": true, "deviation": true}, {"base_key": "turn_c_i", "metric_name": "Monthly Turn (Cost)", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_TURN_C", "formats": {"WP": "index", "TY": "index", "LY": "index", "LLY": "index", "BDGT": "index", "FCST": "index"}, "ui": {"WP": "Y", "TY": "N", "LY": "Y", "LLY": "Y", "BDGT": "Y", "FCST": "Y"}, "absent": [], "present_count": 6, "expected_type": "index", "actual_type": "index", "type_ok": true, "fmt_consistent": true, "deviation": false}, {"base_key": "turn_u_i", "metric_name": "Monthly Turn (Units)", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_TURN_U", "formats": {"WP": "index", "TY": "index", "LY": "index", "LLY": "index", "BDGT": "index", "FCST": "index"}, "ui": {"WP": "Y", "TY": "N", "LY": "Y", "LLY": "Y", "BDGT": "Y", "FCST": "Y"}, "absent": [], "present_count": 6, "expected_type": "index", "actual_type": "index", "type_ok": true, "fmt_consistent": true, "deviation": false}, {"base_key": "wrn_attch_p", "metric_name": "Written Attach Rate", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_WRN_ATTCH_P", "formats": {"WP": "percentageTwoDecimals", "TY": "percentageTwoDecimals", "LY": "percentageTwoDecimals", "LLY": "percentageTwoDecimals", "BDGT": "percentageTwoDecimals", "FCST": "percentageTwoDecimals"}, "ui": {"WP": "Y", "TY": "N", "LY": "Y", "LLY": "Y", "BDGT": "Y", "FCST": "Y"}, "absent": [], "present_count": 6, "expected_type": "percentageTwoDecimals", "actual_type": "percentageTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": false}, {"base_key": "wrn_ausp", "metric_name": "Written AUSP", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": null, "formats": {"WP": "dollarsRetailTwoDecimals", "TY": "dollarsRetailTwoDecimals", "LY": "dollarsRetailTwoDecimals", "LLY": "dollarsRetailTwoDecimals", "BDGT": "dollarsRetailTwoDecimals", "FCST": "dollarsRetailTwoDecimals"}, "ui": {"WP": "Y", "TY": "N", "LY": "Y", "LLY": "Y", "BDGT": "Y", "FCST": "Y"}, "absent": [], "present_count": 6, "expected_type": null, "actual_type": "dollarsRetailTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": false}, {"base_key": "wrn_awros_r", "metric_name": "Written AWROS", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_WRN_AWROS_I", "formats": {"WP": "dollarsRetailTwoDecimals", "TY": null, "LY": "dollarsRetailTwoDecimals", "LLY": "dollarsRetailTwoDecimals", "BDGT": "dollarsRetailTwoDecimals", "FCST": "dollarsRetailTwoDecimals"}, "ui": {"WP": "Y", "TY": null, "LY": "Y", "LLY": "Y", "BDGT": "Y", "FCST": "Y"}, "absent": ["TY"], "present_count": 5, "expected_type": "dollarsRetailTwoDecimals", "actual_type": "dollarsRetailTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": true}, {"base_key": "wrn_bos_p", "metric_name": "Written BOS %", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_WRN_BOS_P", "formats": {"WP": "percentageTwoDecimals", "TY": "percentageTwoDecimals", "LY": "percentageTwoDecimals", "LLY": "percentageTwoDecimals", "BDGT": "percentageTwoDecimals", "FCST": "percentageTwoDecimals"}, "ui": {"WP": "Y", "TY": "N", "LY": "Y", "LLY": "Y", "BDGT": "Y", "FCST": "Y"}, "absent": [], "present_count": 6, "expected_type": "percentageTwoDecimals", "actual_type": "percentageTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": false}, {"base_key": "wrn_cm_p", "metric_name": "Written Core Margin %", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_WRN_CM_P", "formats": {"WP": "percentageTwoDecimals", "TY": "percentageTwoDecimals", "LY": "percentageTwoDecimals", "LLY": "percentageTwoDecimals", "BDGT": "percentageTwoDecimals", "FCST": "percentageTwoDecimals"}, "ui": {"WP": "Y", "TY": "N", "LY": "Y", "LLY": "Y", "BDGT": "Y", "FCST": "Y"}, "absent": [], "present_count": 6, "expected_type": "percentageTwoDecimals", "actual_type": "percentageTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": false}, {"base_key": "wrn_cm_r", "metric_name": "Written Core Margin $", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_WRN_CM_R", "formats": {"WP": "dollarsRetailTwoDecimals", "TY": "dollarsRetailTwoDecimals", "LY": "dollarsRetailTwoDecimals", "LLY": "dollarsRetailTwoDecimals", "BDGT": "dollarsRetailTwoDecimals", "FCST": "dollarsRetailTwoDecimals"}, "ui": {"WP": "Y", "TY": "N", "LY": "Y", "LLY": "Y", "BDGT": "Y", "FCST": "Y"}, "absent": [], "present_count": 6, "expected_type": "dollarsRetailTwoDecimals", "actual_type": "dollarsRetailTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": false}, {"base_key": "wrn_cmp_sls_p", "metric_name": "Written Comp Sales %", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_WRN_CMP_SLS_P", "formats": {"WP": "percentageTwoDecimals", "TY": null, "LY": null, "LLY": null, "BDGT": "percentageTwoDecimals", "FCST": "percentageTwoDecimals"}, "ui": {"WP": "Y", "TY": null, "LY": null, "LLY": null, "BDGT": "Y", "FCST": "Y"}, "absent": ["TY", "LY", "LLY"], "present_count": 3, "expected_type": "percentageTwoDecimals", "actual_type": "percentageTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": true}, {"base_key": "wrn_cmp_sls_r", "metric_name": "Written Comp Sales Retail $", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_WRN_CMP_SLS_R", "formats": {"WP": "dollarsRetailTwoDecimals", "TY": null, "LY": null, "LLY": null, "BDGT": "dollarsRetailTwoDecimals", "FCST": "dollarsRetailTwoDecimals"}, "ui": {"WP": "Y", "TY": null, "LY": null, "LLY": null, "BDGT": "Y", "FCST": "Y"}, "absent": ["TY", "LY", "LLY"], "present_count": 3, "expected_type": "dollarsRetailTwoDecimals", "actual_type": "dollarsRetailTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": true}, {"base_key": "wrn_cogs_c", "metric_name": "Written COGS $", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_WRN_COGS_R", "formats": {"WP": "dollarsCostTwoDecimals", "TY": "dollarsCostTwoDecimals", "LY": "dollarsCostTwoDecimals", "LLY": "dollarsCostTwoDecimals", "BDGT": "dollarsCostTwoDecimals", "FCST": "dollarsCostTwoDecimals"}, "ui": {"WP": "Y", "TY": "N", "LY": "Y", "LLY": "Y", "BDGT": "Y", "FCST": "Y"}, "absent": [], "present_count": 6, "expected_type": "dollarsCostTwoDecimals", "actual_type": "dollarsCostTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": false}, {"base_key": "wrn_retrn_sls_r", "metric_name": "Written Return Sales Retail $", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_WRN_RETRN_SLS_R", "formats": {"WP": "dollarsRetailTwoDecimals", "TY": "dollarsRetailTwoDecimals", "LY": "dollarsRetailTwoDecimals", "LLY": "dollarsRetailTwoDecimals", "BDGT": "dollarsRetailTwoDecimals", "FCST": "dollarsRetailTwoDecimals"}, "ui": {"WP": "Y", "TY": "N", "LY": "Y", "LLY": "Y", "BDGT": "Y", "FCST": "Y"}, "absent": [], "present_count": 6, "expected_type": "dollarsRetailTwoDecimals", "actual_type": "dollarsRetailTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": false}, {"base_key": "wrn_retrn_sls_r_p", "metric_name": "Written Return Sales Retail %", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_WRN_RETRN_SLS_R_P", "formats": {"WP": "percentageTwoDecimals", "TY": "percentageTwoDecimals", "LY": "percentageTwoDecimals", "LLY": "percentageTwoDecimals", "BDGT": "percentageTwoDecimals", "FCST": "percentageTwoDecimals"}, "ui": {"WP": "Y", "TY": "N", "LY": "Y", "LLY": "Y", "BDGT": "Y", "FCST": "Y"}, "absent": [], "present_count": 6, "expected_type": "percentageTwoDecimals", "actual_type": "percentageTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": false}, {"base_key": "wrn_retrn_sls_u", "metric_name": "Written Return Sales U", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_WRN_RETRN_SLS_U", "formats": {"WP": "unit", "TY": "unit", "LY": "unit", "LLY": "unit", "BDGT": "unit", "FCST": "unit"}, "ui": {"WP": "Y", "TY": "N", "LY": "Y", "LLY": "Y", "BDGT": "Y", "FCST": "Y"}, "absent": [], "present_count": 6, "expected_type": "unit", "actual_type": "unit", "type_ok": true, "fmt_consistent": true, "deviation": false}, {"base_key": "wrn_retrn_sls_u_p", "metric_name": "Written Return Sales U %", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_WRN_RETRN_SLS_U_P", "formats": {"WP": "percentageTwoDecimals", "TY": "percentageTwoDecimals", "LY": "percentageTwoDecimals", "LLY": "percentageTwoDecimals", "BDGT": "percentageTwoDecimals", "FCST": "percentageTwoDecimals"}, "ui": {"WP": "Y", "TY": "N", "LY": "Y", "LLY": "Y", "BDGT": "Y", "FCST": "Y"}, "absent": [], "present_count": 6, "expected_type": "percentageTwoDecimals", "actual_type": "percentageTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": false}, {"base_key": "wrn_sls_r", "metric_name": "Written Sales Retail $", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_WRN_SLS_R", "formats": {"WP": "dollarsRetailTwoDecimals", "TY": "dollarsRetailTwoDecimals", "LY": "dollarsRetailTwoDecimals", "LLY": "dollarsRetailTwoDecimals", "BDGT": "dollarsRetailTwoDecimals", "FCST": "dollarsRetailTwoDecimals"}, "ui": {"WP": "Y", "TY": "N", "LY": "Y", "LLY": "Y", "BDGT": "Y", "FCST": "Y"}, "absent": [], "present_count": 6, "expected_type": "dollarsRetailTwoDecimals", "actual_type": "dollarsRetailTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": false}, {"base_key": "wrn_sls_r_diff", "metric_name": "Written Sales Retail $ Diff", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_WRN_SLS_R_DIFF", "formats": {"WP": "dollarsRetailTwoDecimals", "TY": null, "LY": null, "LLY": null, "BDGT": "dollarsRetailTwoDecimals", "FCST": "dollarsRetailTwoDecimals"}, "ui": {"WP": "Y", "TY": null, "LY": null, "LLY": null, "BDGT": "Y", "FCST": "Y"}, "absent": ["TY", "LY", "LLY"], "present_count": 3, "expected_type": null, "actual_type": "dollarsRetailTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": true}, {"base_key": "wrn_sls_r_diff_r", "metric_name": "Written Sales Retail $ Diff", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": null, "formats": {"WP": null, "TY": "dollarsRetailTwoDecimals", "LY": null, "LLY": null, "BDGT": null, "FCST": null}, "ui": {"WP": null, "TY": "N", "LY": null, "LLY": null, "BDGT": null, "FCST": null}, "absent": ["WP", "LY", "LLY", "BDGT", "FCST"], "present_count": 1, "expected_type": "dollarsRetailTwoDecimals", "actual_type": "dollarsRetailTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": true}, {"base_key": "wrn_sls_r_var_p", "metric_name": "Written Sales Retail % Var", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_WRN_SLS_R_VAR", "formats": {"WP": "percentageTwoDecimals", "TY": "percentageTwoDecimals", "LY": null, "LLY": null, "BDGT": "percentageTwoDecimals", "FCST": "percentageTwoDecimals"}, "ui": {"WP": "Y", "TY": "N", "LY": null, "LLY": null, "BDGT": "Y", "FCST": "Y"}, "absent": ["LY", "LLY"], "present_count": 4, "expected_type": "percentageTwoDecimals", "actual_type": "percentageTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": true}, {"base_key": "wrn_sls_u", "metric_name": "Written Sales Units", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": null, "formats": {"WP": "unit", "TY": "unit", "LY": "unit", "LLY": "unit", "BDGT": "unit", "FCST": "unit"}, "ui": {"WP": "Y", "TY": "N", "LY": "Y", "LLY": "Y", "BDGT": "Y", "FCST": "Y"}, "absent": [], "present_count": 6, "expected_type": "unit", "actual_type": "unit", "type_ok": true, "fmt_consistent": true, "deviation": false}, {"base_key": "wrn_sls_u_diff_u", "metric_name": "Written Sales U Diff", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_WRN_SLS_U_DIFF", "formats": {"WP": "unit", "TY": "unit", "LY": null, "LLY": null, "BDGT": "unit", "FCST": "unit"}, "ui": {"WP": "Y", "TY": "N", "LY": null, "LLY": null, "BDGT": "Y", "FCST": "Y"}, "absent": ["LY", "LLY"], "present_count": 4, "expected_type": "unit", "actual_type": "unit", "type_ok": true, "fmt_consistent": true, "deviation": true}, {"base_key": "wrn_sls_u_var_p", "metric_name": "Written Sales U % Var", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_WRN_SLS_U_VAR", "formats": {"WP": "percentageTwoDecimals", "TY": "percentageTwoDecimals", "LY": null, "LLY": null, "BDGT": "percentageTwoDecimals", "FCST": "percentageTwoDecimals"}, "ui": {"WP": "Y", "TY": "N", "LY": null, "LLY": null, "BDGT": "Y", "FCST": "Y"}, "absent": ["LY", "LLY"], "present_count": 4, "expected_type": "percentageTwoDecimals", "actual_type": "percentageTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": true}, {"base_key": "wrn_tc_p", "metric_name": "Written TC %", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_WRN_TC_P", "formats": {"WP": "percentageTwoDecimals", "TY": "percentageTwoDecimals", "LY": "percentageTwoDecimals", "LLY": "percentageTwoDecimals", "BDGT": "percentageTwoDecimals", "FCST": "percentageTwoDecimals"}, "ui": {"WP": "Y", "TY": "N", "LY": "Y", "LLY": "Y", "BDGT": "Y", "FCST": "Y"}, "absent": [], "present_count": 6, "expected_type": "percentageTwoDecimals", "actual_type": "percentageTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": false}, {"base_key": "wrn_tc_r", "metric_name": "Written TC $", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_WRN_TC_R", "formats": {"WP": "dollarsRetailTwoDecimals", "TY": "dollarsRetailTwoDecimals", "LY": "dollarsRetailTwoDecimals", "LLY": "dollarsRetailTwoDecimals", "BDGT": "dollarsRetailTwoDecimals", "FCST": "dollarsRetailTwoDecimals"}, "ui": {"WP": "Y", "TY": "N", "LY": "Y", "LLY": "Y", "BDGT": "Y", "FCST": "Y"}, "absent": [], "present_count": 6, "expected_type": "dollarsRetailTwoDecimals", "actual_type": "dollarsRetailTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": false}, {"base_key": "wrn_tc_r_diff_p", "metric_name": "Shifted Holiday Written TC %", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_WRN_TC_R_DIFF", "formats": {"WP": "percentageTwoDecimals", "TY": null, "LY": null, "LLY": null, "BDGT": "percentageTwoDecimals", "FCST": "percentageTwoDecimals"}, "ui": {"WP": "Y", "TY": null, "LY": null, "LLY": null, "BDGT": "Y", "FCST": "Y"}, "absent": ["TY", "LY", "LLY"], "present_count": 3, "expected_type": "percentageTwoDecimals", "actual_type": "percentageTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": true}, {"base_key": "wrn_tc_r_diff_r", "metric_name": "Written TC $ Diff", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": null, "formats": {"WP": null, "TY": "dollarsRetailTwoDecimals", "LY": null, "LLY": null, "BDGT": null, "FCST": null}, "ui": {"WP": null, "TY": "N", "LY": null, "LLY": null, "BDGT": null, "FCST": null}, "absent": ["WP", "LY", "LLY", "BDGT", "FCST"], "present_count": 1, "expected_type": "dollarsRetailTwoDecimals", "actual_type": "dollarsRetailTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": true}, {"base_key": "wrn_tc_r_var", "metric_name": "Written TC $ Var", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_WRN_TC_R_VAR", "formats": {"WP": "dollarsRetailTwoDecimals", "TY": null, "LY": null, "LLY": null, "BDGT": "dollarsRetailTwoDecimals", "FCST": "dollarsRetailTwoDecimals"}, "ui": {"WP": "Y", "TY": null, "LY": null, "LLY": null, "BDGT": "Y", "FCST": "Y"}, "absent": ["TY", "LY", "LLY"], "present_count": 3, "expected_type": null, "actual_type": "dollarsRetailTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": true}, {"base_key": "wrn_vi_p", "metric_name": "Written VI %", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_WRN_VI_P", "formats": {"WP": "percentageTwoDecimals", "TY": "percentageTwoDecimals", "LY": "percentageTwoDecimals", "LLY": "percentageTwoDecimals", "BDGT": "percentageTwoDecimals", "FCST": "percentageTwoDecimals"}, "ui": {"WP": "Y", "TY": "N", "LY": "Y", "LLY": "Y", "BDGT": "Y", "FCST": "Y"}, "absent": [], "present_count": 6, "expected_type": "percentageTwoDecimals", "actual_type": "percentageTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": false}, {"base_key": "wrn_vi_r", "metric_name": "Written VI $", "metric_group": "N/A", "metric_group_key": "N/A", "translation_key": "PRODUCT.MFP.METRIC_NAME_WRN_VI_R", "formats": {"WP": "dollarsRetailTwoDecimals", "TY": "dollarsRetailTwoDecimals", "LY": "dollarsRetailTwoDecimals", "LLY": "dollarsRetailTwoDecimals", "BDGT": "dollarsRetailTwoDecimals", "FCST": "dollarsRetailTwoDecimals"}, "ui": {"WP": "Y", "TY": "N", "LY": "Y", "LLY": "Y", "BDGT": "Y", "FCST": "Y"}, "absent": [], "present_count": 6, "expected_type": "dollarsRetailTwoDecimals", "actual_type": "dollarsRetailTwoDecimals", "type_ok": true, "fmt_consistent": true, "deviation": false}];
+var VERSIONS=['WP','TY','LY','LLY','BDGT','FCST'];
+var TYPE_SHORT={dollarsRetailTwoDecimals:'$R',dollarsCostTwoDecimals:'$C',percentageTwoDecimals:'%',unit:'U',index:'I',boolean:'B'};
+var TYPE_CLS={dollarsRetailTwoDecimals:'type-retail',dollarsCostTwoDecimals:'type-cost',percentageTwoDecimals:'type-pct',unit:'type-unit',index:'type-idx',boolean:'type-bool'};
+var sortCol='base_key',sortDir=1,filtered=ALL_DATA.slice();
+
+function switchTab(name){
+  ['overview','pivot','sanity'].forEach(function(t){
+    var p=document.getElementById('tab-'+t),b=document.getElementById('tb-'+t);
+    if(p){p.classList.remove('active');p.style.display='none';}
+    if(b)b.classList.remove('active');
+  });
+  var p=document.getElementById('tab-'+name),b=document.getElementById('tb-'+name);
+  if(p){p.classList.add('active');p.style.display='block';}
+  if(b)b.classList.add('active');
+  if(name==='pivot')setTimeout(renderPivot,30);
+}
+
+function tog(id){
+  var b=document.getElementById(id),c=document.getElementById('c-'+id);
+  if(!b)return;
+  if(b.style.display==='none'){b.style.display='block';if(c)c.classList.add('open');}
+  else{b.style.display='none';if(c)c.classList.remove('open');}
+}
+
+function toggleFilterPanel(){
+  var fp=document.getElementById('filterPanel'),btn=document.getElementById('toggleFP');
+  fp.classList.toggle('collapsed');
+  btn.textContent=fp.classList.contains('collapsed')?'▶ Filters':'◀ Filters';
+}
+function toggleChip(el,type){
+  var isAll=(el.dataset.fmt==='ALL');
+  if(isAll){
+    el.closest('.fp-chips').querySelectorAll('.fchip').forEach(function(c){c.classList.remove('active');});
+    el.classList.add('active');
+  } else {
+    var a=el.closest('.fp-chips').querySelector('[data-fmt="ALL"]');
+    if(a)a.classList.remove('active');
+    el.classList.toggle('active');
+    if(el.closest('.fp-chips').querySelectorAll('.fchip.active').length===0&&a)a.classList.add('active');
+  }
+  applyFilters();
+}
+function setAllVersions(c){document.querySelectorAll('#verFilter input').forEach(function(cb){cb.checked=c;});applyFilters();}
+function toggleCol(cb){
+  var show=cb.checked;
+  document.querySelectorAll('.'+cb.dataset.col).forEach(function(el){el.style.display=show?'':'none';});
+}
+function resetFilters(){
+  document.getElementById('searchInput').value='';
+  document.querySelectorAll('#fmtFilter .fchip').forEach(function(c,i){c.classList.toggle('active',i===0);});
+  setAllVersions(true);
+  document.getElementById('devOnly').checked=false;
+  document.getElementById('uiOnly').checked=false;
+  applyFilters();
+}
+
+function applyFilters(){
+  var search=document.getElementById('searchInput').value.toLowerCase().trim();
+  var activeFmts=[];
+  document.querySelectorAll('#fmtFilter .fchip.active').forEach(function(c){activeFmts.push(c.dataset.fmt);});
+  var activeVers=[];
+  document.querySelectorAll('#verFilter input:checked').forEach(function(c){activeVers.push(c.value);});
+  var devOnly=document.getElementById('devOnly').checked;
+  var uiOnly=document.getElementById('uiOnly').checked;
+  filtered=ALL_DATA.filter(function(r){
+    if(search&&r.base_key.toLowerCase().indexOf(search)<0&&r.metric_name.toLowerCase().indexOf(search)<0)return false;
+    if(activeFmts.indexOf('ALL')<0&&(!r.actual_type||activeFmts.indexOf(r.actual_type)<0))return false;
+    if(activeVers.length>0){
+      for(var i=0;i<activeVers.length;i++){if(!r.formats[activeVers[i]])return false;}
+    }
+    if(devOnly&&!r.deviation)return false;
+    if(uiOnly){
+      var hasUI=false;
+      for(var i=0;i<VERSIONS.length;i++){if(r.ui[VERSIONS[i]]==='Y'){hasUI=true;break;}}
+      if(!hasUI)return false;
+    }
+    return true;
+  });
+  sortFiltered();renderPivotBody();updateInfo();
+}
+
+function sortBy(col){
+  if(sortCol===col)sortDir*=-1;else{sortCol=col;sortDir=1;}
+  document.querySelectorAll('.sort-ic').forEach(function(el){el.textContent='↕';});
+  document.querySelectorAll('.pvt thead th').forEach(function(th){th.classList.remove('sorted-asc','sorted-desc');});
+  var th=document.querySelector('[data-col="'+col+'"]');
+  if(th){th.classList.add(sortDir===1?'sorted-asc':'sorted-desc');var ic=th.querySelector('.sort-ic');if(ic)ic.textContent=sortDir===1?'↑':'↓';}
+  sortFiltered();renderPivotBody();
+}
+function sortFiltered(){
+  filtered.sort(function(a,b){
+    var va,vb;
+    if(sortCol.indexOf('fmt_')===0){var v=sortCol.replace('fmt_','');va=a.formats[v]||'';vb=b.formats[v]||'';}
+    else{va=a[sortCol]!=null?String(a[sortCol]):'';vb=b[sortCol]!=null?String(b[sortCol]):'';}
+    return va<vb?-sortDir:va>vb?sortDir:0;
+  });
+}
+
+function cellHTML(val){
+  if(!val)return'<td class="cell-missing pvt"><span class="dash">—</span></td>';
+  var s=TYPE_SHORT[val]||val.substring(0,3),c=TYPE_CLS[val]||'';
+  return'<td class="cell-present pvt '+c+'"><span class="tbadge">'+s+'</span></td>';
+}
+function cntBadge(n){
+  var cls=n===6?'cnt-6':n>=4?'cnt-mid':'cnt-low';
+  return'<span class="cnt-badge '+cls+'">'+n+'/6</span>';
+}
+function toggleRow(el){el.classList.toggle('selected');}
+
+function renderPivotBody(){
+  var tbody=document.getElementById('pivotBody');
+  if(!filtered.length){
+    tbody.innerHTML='<tr><td colspan="20"><div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-msg">No KPIs match the current filters</div></div></td></tr>';
+    return;
+  }
+  var html='';
+  for(var ri=0;ri<filtered.length;ri++){
+    var r=filtered[ri];
+    var devCls=r.deviation?'has-dev':'';
+    var verPrefix=[];
+    for(var vi=0;vi<VERSIONS.length;vi++){if(r.formats[VERSIONS[vi]])verPrefix.push(VERSIONS[vi]);}
+    html+='<tr class="'+devCls+'" onclick="toggleRow(this)">';
+    html+='<td class="ph-key"><code>'+r.base_key+'</code></td>';
+    html+='<td class="ph-name"><span class="ver-prefix">'+verPrefix.join('/')+'</span>'+r.metric_name+'</td>';
+    for(var vi=0;vi<VERSIONS.length;vi++){html+=cellHTML(r.formats[VERSIONS[vi]]);}
+    for(var vi=0;vi<VERSIONS.length;vi++){
+      var ui=r.ui[VERSIONS[vi]];
+      html+='<td class="col-ui-'+VERSIONS[vi]+'" style="display:none;text-align:center">'+(ui==='Y'?'<span style="color:var(--ok-text);font-weight:700">Y</span>':ui==='N'?'<span style="color:var(--dim)">N</span>':'—')+'</td>';
+    }
+    html+='<td class="col-cnt">'+cntBadge(r.present_count)+'</td>';
+    html+='</tr>';
+  }
+  tbody.innerHTML=html;
+  document.getElementById('rowCount').textContent=filtered.length+' KPI'+(filtered.length!==1?'s':'');
+}
+function updateInfo(){
+  var info=[];
+  var s=document.getElementById('searchInput').value.trim();
+  if(s)info.push('"'+s+'"');
+  if(document.getElementById('devOnly').checked)info.push('deviations only');
+  document.getElementById('activeFiltersInfo').textContent=info.length?'Filtered: '+info.join(' · '):'';
+}
+function renderPivot(){
+  applyFilters();
+  document.querySelectorAll('.col-vis').forEach(function(cb){toggleCol(cb);});
+}
+function exportCSV(){
+  var headers=['base_key','metric_name','versions'].concat(VERSIONS.map(function(v){return'fmt_'+v;})).concat(['present_count']);
+  var rows=[headers.join(',')];
+  for(var i=0;i<filtered.length;i++){
+    var r=filtered[i];
+    var vp=[];for(var vi=0;vi<VERSIONS.length;vi++){if(r.formats[VERSIONS[vi]])vp.push(VERSIONS[vi]);}
+    var cells=[r.base_key,'"'+r.metric_name+'"',vp.join('/')];
+    for(var vi=0;vi<VERSIONS.length;vi++){cells.push(r.formats[VERSIONS[vi]]||'');}
+    cells.push(r.present_count);
+    rows.push(cells.join(','));
+  }
+  var blob=new Blob([rows.join('\n')],{type:'text/csv'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='MFRM_KPI_Export.csv';a.click();
+}
+
+/* ── Live Refresh from Google Sheets ── */
+var SHEETS_CSV_URL='https://docs.google.com/spreadsheets/d/1vVC6C5UR78pNttTeMtKKdnUpUa1GBYQmdN61vQH_Qk8/gviz/tq?tqx=out:csv&gid=1703237684';
+var VER_PREFIXES=['wp_','ty_','ly_','lly_','bdgt_','fcst_'];
+var VER_MAP={wp_:'WP',ty_:'TY',ly_:'LY',lly_:'LLY',bdgt_:'BDGT',fcst_:'FCST'};
+var TYPE_FROM_SUFFIX={_r:'dollarsRetailTwoDecimals',_c:'dollarsCostTwoDecimals',_p:'percentageTwoDecimals',_u:'unit',_i:'index',_b:'boolean'};
+
+function setLastUpdated(ts){
+  document.getElementById('lastUpdatedTime').textContent=ts;
+  try{localStorage.setItem('mfrm_last_updated',ts);}catch(e){}
+}
+function initLastUpdated(){
+  try{
+    var saved=localStorage.getItem('mfrm_last_updated');
+    if(saved)document.getElementById('lastUpdatedTime').textContent=saved;
+  }catch(e){}
+}
+
+function inferTypeFromKey(key){
+  for(var s in TYPE_FROM_SUFFIX){if(key.endsWith(s))return TYPE_FROM_SUFFIX[s];}
+  return null;
+}
+
+function processSheetRows(rows){
+  /* rows: array of objects with column headers as keys */
+  var byBase={};
+  for(var ri=0;ri<rows.length;ri++){
+    var row=rows[ri];
+    var metricKey=(row['METRIC KEY']||row['metric key']||'').trim().toLowerCase();
+    var metricName=(row['METRIC NAME']||row['metric name']||'').trim();
+    var translationKey=(row['TRANSLATION KEY']||row['translation key']||'').trim();
+    var uiFlag=(row['UI']||row['ui']||'N').trim().toUpperCase();
+    var formatVal=(row['FORMAT']||row['format']||'').trim();
+    if(!metricKey)continue;
+    /* detect version prefix */
+    var ver=null,baseKey=metricKey;
+    for(var pi=0;pi<VER_PREFIXES.length;pi++){
+      if(metricKey.startsWith(VER_PREFIXES[pi])){
+        ver=VER_MAP[VER_PREFIXES[pi]];
+        baseKey=metricKey.slice(VER_PREFIXES[pi].length);
+        break;
+      }
+    }
+    if(!ver)continue;
+    if(!byBase[baseKey]){
+      byBase[baseKey]={base_key:baseKey,metric_name:metricName,metric_group:'N/A',metric_group_key:'N/A',
+        translation_key:translationKey,formats:{},ui:{},absent:[],present_count:0,
+        expected_type:inferTypeFromKey(baseKey),actual_type:null,type_ok:true,fmt_consistent:true,deviation:false};
+    }
+    byBase[baseKey].formats[ver]=formatVal||inferTypeFromKey(baseKey)||'unit';
+    byBase[baseKey].ui[ver]=uiFlag;
+  }
+  /* compute stats */
+  var result=[];
+  for(var bk in byBase){
+    var rec=byBase[bk];
+    var types=[],absentList=[];
+    for(var vi=0;vi<VERSIONS.length;vi++){
+      var v=VERSIONS[vi];
+      if(rec.formats[v]){types.push(rec.formats[v]);}
+      else{rec.formats[v]=null;absentList.push(v);}
+    }
+    rec.absent=absentList;
+    rec.present_count=types.length;
+    if(types.length>0)rec.actual_type=types[0];
+    rec.fmt_consistent=types.every(function(t){return t===types[0];});
+    rec.deviation=absentList.length>0;
+    result.push(rec);
+  }
+  result.sort(function(a,b){return a.base_key<b.base_key?-1:1;});
+  return result;
+}
+
+function updateOverviewStats(data){
+  var total=data.length;
+  var allPresent=data.filter(function(r){return r.present_count===6;}).length;
+  var withDev=data.filter(function(r){return r.deviation;}).length;
+  var typeViol=data.filter(function(r){return!r.fmt_consistent;}).length;
+  /* update stat cards if IDs exist */
+  var elTotal=document.getElementById('stat-total');
+  var elPresent=document.getElementById('stat-all-present');
+  var elDev=document.getElementById('stat-deviations');
+  var elType=document.getElementById('stat-type-viol');
+  if(elTotal)elTotal.textContent=total;
+  if(elPresent)elPresent.textContent=allPresent;
+  if(elDev)elDev.textContent=withDev;
+  if(elType)elType.textContent=typeViol;
+}
+
+function liveRefresh(){
+  var btn=document.getElementById('refreshBtn');
+  var lbl=document.getElementById('refreshLabel');
+  var spin=document.getElementById('refreshSpinner');
+  btn.disabled=true;lbl.textContent='Refreshing…';spin.style.display='';
+  Papa.parse(SHEETS_CSV_URL,{
+    download:true,
+    header:true,
+    skipEmptyLines:true,
+    complete:function(results){
+      try{
+        var newData=processSheetRows(results.data);
+        if(!newData.length)throw new Error('No data parsed');
+        ALL_DATA=newData;
+        filtered=ALL_DATA.slice();
+        renderPivot();
+        updateOverviewStats(newData);
+        var ts=new Date().toLocaleString();
+        setLastUpdated(ts);
+        lbl.textContent='🔄 Refresh';spin.style.display='none';btn.disabled=false;
+      }catch(e){
+        lbl.textContent='⚠ Error';spin.style.display='none';
+        setTimeout(function(){lbl.textContent='🔄 Refresh';btn.disabled=false;},3000);
+        console.error('Refresh failed:',e);
+      }
+    },
+    error:function(err){
+      lbl.textContent='⚠ Error';spin.style.display='none';
+      setTimeout(function(){lbl.textContent='🔄 Refresh';btn.disabled=false;},3000);
+      console.error('Fetch error:',err);
+    }
+  });
+}
+
+/* init on load */
+window.addEventListener('DOMContentLoaded',function(){
+  renderPivot();
+  initLastUpdated();
+});
+</script>
+</body>
+</html>
